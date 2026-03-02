@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Schéma SQL — EKARA</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #0a0d14;
+    --surface: #111520;
+    --surface2: #161b2e;
+    --border: #1e2436;
+    --accent1: #4f9cf9;
+    --accent2: #a78bfa;
+    --accent3: #34d399;
+    --accent4: #fb923c;
+    --accent5: #f472b6;
+    --accent6: #facc15;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --muted2: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: auto;
+  }
+
+  header {
+    padding: 1.5rem 2.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    background: linear-gradient(120deg,#0d1220,#0a0d14);
+  }
+  header h1 {
+    font-family:'Syne',sans-serif;
+    font-size:1.4rem;
+    font-weight:800;
+    letter-spacing:-0.03em;
+    color:var(--accent1);
+  }
+  header p { font-size:0.7rem; color:var(--muted); margin-top:.2rem; }
+
+  .ctx-chips { display:flex; gap:.6rem; flex-wrap:wrap; margin-left:auto; }
+  .ctx-chip {
+    font-size:.6rem; padding:.25rem .65rem;
+    border-radius:20px; border:1px solid var(--border);
+    color:var(--muted2); letter-spacing:.04em;
+  }
+
+  .canvas {
+    position:relative;
+    padding:2.5rem 2rem 1rem;
+    overflow:auto;
+  }
+  svg.lines {
+    position:absolute; top:0; left:0;
+    width:100%; height:100%;
+    pointer-events:none; z-index:0;
+  }
+  .grid {
+    position:relative; z-index:1;
+    display:grid;
+    grid-template-columns:repeat(4,290px);
+    grid-auto-rows:auto;
+    gap:2rem 2.5rem;
+    justify-content:center;
+    min-width:fit-content;
+  }
+
+  .table-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:10px;
+    overflow:visible;
+    position:relative;
+    transition:transform .2s, box-shadow .2s;
+  }
+  .table-card:hover {
+    transform:translateY(-2px);
+    box-shadow:0 10px 40px rgba(0,0,0,.55);
+  }
+  .table-card::before {
+    content:''; position:absolute;
+    top:0;left:0;right:0;height:3px;
+    border-radius:10px 10px 0 0;
+  }
+  .card-result::before   { background:var(--accent1); }
+  .card-reference::before{ background:var(--accent3); }
+  .card-result2::before  { background:var(--accent2); }
+
+  .table-header {
+    padding:.7rem 1rem;
+    display:flex; align-items:center; gap:.5rem;
+    border-bottom:1px solid var(--border);
+    background:rgba(255,255,255,.02);
+  }
+  .schema-badge {
+    font-size:.55rem; font-weight:700;
+    padding:.12rem .4rem; border-radius:4px;
+    letter-spacing:.06em; text-transform:uppercase; flex-shrink:0;
+  }
+  .badge-result   { background:rgba(79,156,249,.15); color:var(--accent1); }
+  .badge-reference{ background:rgba(52,211,153,.15);  color:var(--accent3); }
+  .table-name { font-family:'Syne',sans-serif; font-size:.85rem; font-weight:800; }
+  .row-count { margin-left:auto; font-size:.6rem; color:var(--muted); }
+
+  .fields { padding:.35rem 0; }
+
+  .field {
+    display:flex; align-items:center;
+    padding:.28rem .9rem; gap:.55rem;
+    font-size:.67rem;
+    cursor:default;
+    position:relative;
+    transition:background .12s;
+  }
+  .field:hover { background:rgba(255,255,255,.04); }
+
+  .field-icon {
+    width:15px; height:15px; border-radius:3px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:.52rem; font-weight:700; flex-shrink:0;
+  }
+  .icon-pk   { background:rgba(250,204,21,.18);  color:var(--accent6); }
+  .icon-fk   { background:rgba(167,139,250,.18); color:var(--accent2); }
+  .icon-field{ background:rgba(100,116,139,.12); color:var(--muted); }
+  .icon-json { background:rgba(251,146,60,.15);  color:var(--accent4); }
+  .icon-ts   { background:rgba(244,114,182,.15); color:var(--accent5); }
+
+  .field-name { flex:1; color:var(--text); }
+  .field-name.is-pk { color:var(--accent6); font-weight:600; }
+  .field-name.is-fk { color:var(--accent2); }
+
+  .field-type { color:var(--muted); font-size:.58rem; letter-spacing:.02em; flex-shrink:0; }
+
+  .divider { height:1px; background:var(--border); margin:.25rem .9rem; }
+
+  /* Tooltip */
+  .tip {
+    display:none;
+    position:fixed;
+    z-index:9999;
+    width:230px;
+    background:var(--surface2);
+    border:1px solid #2a3250;
+    border-left:3px solid var(--accent1);
+    border-radius:7px;
+    padding:.65rem .8rem;
+    font-size:.63rem;
+    line-height:1.6;
+    color:var(--muted2);
+    pointer-events:none;
+    box-shadow:0 12px 40px rgba(0,0,0,.7);
+  }
+  .tip strong { color:var(--text); display:block; margin-bottom:.2rem; font-size:.66rem; }
+  .tip .tip-type {
+    display:inline-block; font-size:.54rem;
+    background:rgba(79,156,249,.12); color:var(--accent1);
+    padding:.04rem .35rem; border-radius:3px; margin-bottom:.3rem;
+  }
+
+  .legend {
+    display:flex; gap:1.5rem; flex-wrap:wrap;
+    padding:.9rem 2.5rem;
+    border-top:1px solid var(--border);
+  }
+  .legend-item { display:flex; align-items:center; gap:.5rem; font-size:.62rem; color:var(--muted); }
+  .li-dot { width:10px; height:10px; border-radius:2px; flex-shrink:0; }
+
+  .rel-section { padding:.8rem 2.5rem 1.5rem; }
+  .rel-title { font-size:.6rem; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; margin-bottom:.6rem; }
+  .relations { display:flex; gap:.6rem; flex-wrap:wrap; }
+  .rel-chip {
+    display:flex; align-items:center; gap:.4rem;
+    padding:.28rem .7rem;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:20px; font-size:.62rem; color:var(--muted);
+  }
+  .rel-chip .from { color:var(--accent1); }
+  .rel-chip .to   { color:var(--accent3); }
+  .rel-chip .arrow{ color:var(--accent2); }
+  .rel-chip .col  { color:var(--muted); font-size:.58rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>EKARA — Schéma de Base de Données</h1>
+    <p>Plateforme de monitoring applicatif — détection d'incidents par exécution de scénarios sur des robots distribués</p>
+  </div>
+  <div class="ctx-chips">
+    <span class="ctx-chip">8 tables</span>
+    <span class="ctx-chip">2 schémas SQL</span>
+    <span class="ctx-chip">Robots · Sites · Scénarios · Steps</span>
+    <span class="ctx-chip">Alertes · Diagnostics</span>
+  </div>
+</header>
+
+<div class="canvas">
+  <svg class="lines" id="svgLines"></svg>
+
+  <div class="grid" id="grid">
+
+    <!-- 1. reference.scenario -->
+    <div class="table-card card-reference" id="t_scenario" style="grid-column:1;grid-row:1">
+      <div class="table-header">
+        <span class="schema-badge badge-reference">reference</span>
+        <span class="table-name">scenario</span>
+        <span class="row-count">référence</span>
+      </div>
+      <div class="fields">
+        <div class="field" data-tip="Identifiant unique du scénario. Référencé par toutes les tables de résultats pour relier chaque exécution à sa définition de test." data-tip-label="scn_id" data-tip-type="UUID · Clé primaire">
+          <span class="field-icon icon-pk">PK</span><span class="field-name is-pk">scn_id</span><span class="field-type">uuid</span></div>
+        <div class="field" data-tip="Nom lisible du scénario de test, ex. 'PEMA_Admin' ou 'Jira Hong Kong'. Affiché dans les tableaux de bord de monitoring." data-tip-label="scn_name" data-tip-type="varchar">
+          <span class="field-icon icon-field">—</span><span class="field-name">scn_name</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Référence le script source dans le dépôt. Un scénario peut changer de version de script sans changer d'identité ni perdre son historique." data-tip-label="scn_scriptid" data-tip-type="UUID">
+          <span class="field-icon icon-field">—</span><span class="field-name">scn_scriptid</span><span class="field-type">uuid</span></div>
+        <div class="field" data-tip="Date à laquelle ce scénario a été activé et mis en production pour la première fois sur la plateforme." data-tip-label="scn_starttimestamp" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">scn_starttimestamp</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="Date de désactivation du scénario. NULL = toujours actif. Utilisé pour l'archivage sans suppression des données historiques." data-tip-label="scn_endtimestamp" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">scn_endtimestamp</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="Référence le groupement organisationnel (département, projet) auquel appartient ce scénario. Sert à l'organisation des droits d'accès." data-tip-label="dep_id" data-tip-type="UUID · FK implicite">
+          <span class="field-icon icon-field">—</span><span class="field-name">dep_id</span><span class="field-type">uuid</span></div>
+        <div class="field" data-tip="Identifiant de l'application métier surveillée (ex. Oracle ERP, Jira, site e-commerce). Permet de regrouper plusieurs scénarios d'une même appli." data-tip-label="apl_id" data-tip-type="int · FK implicite">
+          <span class="field-icon icon-field">—</span><span class="field-name">apl_id</span><span class="field-type">int</span></div>
+        <div class="field" data-tip="Indique si le scénario est actuellement planifié et exécuté. false = mis en pause sans suppression de l'historique." data-tip-label="scn_isactive" data-tip-type="boolean">
+          <span class="field-icon icon-field">—</span><span class="field-name">scn_isactive</span><span class="field-type">boolean</span></div>
+        <div class="field" data-tip="Liste des plugins requis pour exécuter ce scénario : WEB, HTTP REQUEST, MOBILE-IPHONE, etc. Le slave doit posséder tous ces plugins sinon il ne peut pas être assigné." data-tip-label="scn_scriptplugins" data-tip-type="JSONB Array">
+          <span class="field-icon icon-json">[]</span><span class="field-name">scn_scriptplugins</span><span class="field-type">jsonb</span></div>
+        <div class="field" data-tip="Métrique principale pour calculer le statut global : 'time_total_allsteps' = somme de tous les steps, 'time_total' = durée de la page principale. Sert de base aux seuils d'alerte." data-tip-label="mtr_id" data-tip-type="varchar">
+          <span class="field-icon icon-field">—</span><span class="field-name">mtr_id</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Nombre de tentatives autorisées en cas d'échec avant de déclarer l'incident. 0 = résultat KO immédiat sans retry." data-tip-label="scn_retry" data-tip-type="int">
+          <span class="field-icon icon-field">—</span><span class="field-name">scn_retry</span><span class="field-type">int</span></div>
+        <div class="field" data-tip="Seuil de dégradation en durée ISO 8601. Si la métrique principale dépasse cette valeur, le statut passe à DEGRADED ou THRESHOLD." data-tip-label="scn_threshold" data-tip-type="interval">
+          <span class="field-icon icon-field">—</span><span class="field-name">scn_threshold</span><span class="field-type">interval</span></div>
+        <div class="field" data-tip="Dernière modification de configuration du scénario (changement de seuil, de script, de fréquence d'exécution...)." data-tip-label="scn_statusupdate" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">scn_statusupdate</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="URL vers une documentation externe liée à ce scénario (Confluence, wiki interne, runbook). Facultatif." data-tip-label="scn_externallink" data-tip-type="varchar">
+          <span class="field-icon icon-field">—</span><span class="field-name">scn_externallink</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Nombre d'exécutions consécutives en DEGRADED nécessaires avant de passer en KO. Évite les faux positifs sur des ralentissements ponctuels." data-tip-label="scs_degradedstatuscount" data-tip-type="int">
+          <span class="field-icon icon-field">—</span><span class="field-name">scs_degradedstatuscount</span><span class="field-type">int</span></div>
+      </div>
+    </div>
+
+    <!-- 2. reference.site -->
+    <div class="table-card card-reference" id="t_site" style="grid-column:2;grid-row:1">
+      <div class="table-header">
+        <span class="schema-badge badge-reference">reference</span>
+        <span class="table-name">site</span>
+        <span class="row-count">référence</span>
+      </div>
+      <div class="fields">
+        <div class="field" data-tip="Identifiant unique du site de monitoring — un point de mesure géographique depuis lequel les robots slaves exécutent les scénarios." data-tip-label="sit_id" data-tip-type="UUID · Clé primaire">
+          <span class="field-icon icon-pk">PK</span><span class="field-name is-pk">sit_id</span><span class="field-type">uuid</span></div>
+        <div class="field" data-tip="Nom humain du site ex. 'Paris (Orange)', 'Sydney (AWS)', 'Shanghai (CN Android Telecom)'. Identifie la localisation géographique et l'opérateur réseau." data-tip-label="sit_name" data-tip-type="varchar">
+          <span class="field-icon icon-field">—</span><span class="field-name">sit_name</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Identifiant du robot master associé à ce site. Le master coordonne les slaves (queues) qui exécutent réellement les scénarios depuis ce point de mesure." data-tip-label="rob_id" data-tip-type="varchar · FK implicite">
+          <span class="field-icon icon-field">—</span><span class="field-name">rob_id</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Configuration technique du site : paramètres réseau, certificats, variables d'environnement propres à ce point de mesure." data-tip-label="sit_configuration" data-tip-type="JSONB">
+          <span class="field-icon icon-json">{}</span><span class="field-name">sit_configuration</span><span class="field-type">jsonb</span></div>
+        <div class="field" data-tip="true = site privé installé chez le client dans son réseau interne. false = site public partagé dans l'infrastructure EKARA mutualisée." data-tip-label="sit_isprivate" data-tip-type="boolean">
+          <span class="field-icon icon-field">—</span><span class="field-name">sit_isprivate</span><span class="field-type">boolean</span></div>
+        <div class="field" data-tip="Paramètres du proxy sortant utilisé par ce site : host, port, authentification. NULL si connexion directe sans proxy." data-tip-label="sit_proxysettings" data-tip-type="JSONB">
+          <span class="field-icon icon-json">{}</span><span class="field-name">sit_proxysettings</span><span class="field-type">jsonb</span></div>
+        <div class="field" data-tip="true = site avec plusieurs robots en parallèle pour assurer la continuité des mesures même si un slave tombe en panne." data-tip-label="sit_has_high_availability" data-tip-type="boolean">
+          <span class="field-icon icon-field">—</span><span class="field-name">sit_has_high_availability</span><span class="field-type">boolean</span></div>
+      </div>
+    </div>
+
+    <!-- 3. reference.queue -->
+    <div class="table-card card-reference" id="t_queue" style="grid-column:3;grid-row:1">
+      <div class="table-header">
+        <span class="schema-badge badge-reference">reference</span>
+        <span class="table-name">queue</span>
+        <span class="row-count">référence</span>
+      </div>
+      <div class="fields">
+        <div class="field" data-tip="Identifiant unique du slave robot (ex. 'PARAPW0101'). Un robot master peut gérer plusieurs slaves = plusieurs queues. C'est le slave qui exécute concrètement le scénario." data-tip-label="que_id" data-tip-type="varchar · Clé primaire">
+          <span class="field-icon icon-pk">PK</span><span class="field-name is-pk">que_id</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Nom lisible du slave, souvent SITE+NUMERO+TYPE ex. 'NHHMAD0002ECWP_win' = Nantes, slave 2, Windows. Facilite l'identification physique de la machine." data-tip-label="que_name" data-tip-type="varchar">
+          <span class="field-icon icon-field">—</span><span class="field-name">que_name</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Site géographique auquel appartient ce slave. Permet de regrouper toutes les queues d'un même point de mesure et d'analyser les résultats par localisation." data-tip-label="sit_id" data-tip-type="UUID · FK → site.sit_id">
+          <span class="field-icon icon-fk">FK</span><span class="field-name is-fk">sit_id</span><span class="field-type">uuid</span></div>
+        <div class="field" data-tip="true = slave capable d'ouvrir une interface graphique (navigateur, session desktop). false = slave headless ou mobile en background sans écran." data-tip-label="que_interactive" data-tip-type="boolean">
+          <span class="field-icon icon-field">—</span><span class="field-name">que_interactive</span><span class="field-type">boolean</span></div>
+        <div class="field" data-tip="État courant du slave : 1 = disponible pour recevoir une tâche, 2 = occupé en cours d'exécution, 3 = hors ligne / déconnecté du planificateur." data-tip-label="que_status" data-tip-type="int · Enum">
+          <span class="field-icon icon-field">—</span><span class="field-name">que_status</span><span class="field-type">int</span></div>
+        <div class="field" data-tip="Identifiant du robot (agent) auquel appartient ce slave. Chaque agent peut héberger plusieurs slaves avec des capacités différentes (navigateurs, mobiles...)." data-tip-label="rob_id" data-tip-type="varchar">
+          <span class="field-icon icon-field">—</span><span class="field-name">rob_id</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Identifiant du planificateur central (ex. 'RUM-EKARA0004EALP') qui distribue les tâches aux robots. C'est lui qui décide quel slave exécute quel scénario à quelle heure." data-tip-label="rob_plannerId" data-tip-type="varchar">
+          <span class="field-icon icon-field">—</span><span class="field-name">rob_plannerId</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Capacités déclarées du slave : IS_ROOT (peut lancer des processus root), BACKGROUND (exécution en arrière-plan), SESSION (session interactive), MOBILE/ios..." data-tip-label="que_resources" data-tip-type="JSONB Array">
+          <span class="field-icon icon-json">[]</span><span class="field-name">que_resources</span><span class="field-type">jsonb</span></div>
+        <div class="field" data-tip="Dernier message de statut complet reçu du slave : IP source, timestamp de connexion, adresse du site manager. Snapshot de l'état de santé du robot." data-tip-label="que_laststatus" data-tip-type="JSONB">
+          <span class="field-icon icon-json">{}</span><span class="field-name">que_laststatus</span><span class="field-type">jsonb</span></div>
+        <div class="field" data-tip="Liste des plugins installés sur ce slave avec leur version : WEB, MOBILE-IPHONE, HTTP REQUEST, DESKTOP, DFYPING, etc. Détermine quels scénarios ce slave peut exécuter." data-tip-label="que_plugins" data-tip-type="JSONB Array">
+          <span class="field-icon icon-json">[]</span><span class="field-name">que_plugins</span><span class="field-type">jsonb</span></div>
+        <div class="field" data-tip="1 = slave réservé en exclusivité pour un client ou un scénario. 0 = slave partagé dans le pool commun. Garantit les performances pour les clients premium." data-tip-label="que_reservedstate" data-tip-type="int">
+          <span class="field-icon icon-field">—</span><span class="field-name">que_reservedstate</span><span class="field-type">int</span></div>
+        <div class="field" data-tip="Statut de connexion entre ce slave et son site manager local : 1 = connecté et supervisé, 0 = non supervisé / autonome." data-tip-label="que_sitemanagerstatus" data-tip-type="int">
+          <span class="field-icon icon-field">—</span><span class="field-name">que_sitemanagerstatus</span><span class="field-type">int</span></div>
+        <div class="field" data-tip="Restrictions d'usage de ce slave : liste de scénarios ou clients autorisés. Vide = aucune restriction, le slave accepte toutes les tâches." data-tip-label="que_configuration" data-tip-type="JSONB">
+          <span class="field-icon icon-json">{}</span><span class="field-name">que_configuration</span><span class="field-type">jsonb</span></div>
+      </div>
+    </div>
+
+    <!-- 4. result.alertnotification -->
+    <div class="table-card card-result" id="t_alertnotification" style="grid-column:4;grid-row:1">
+      <div class="table-header">
+        <span class="schema-badge badge-result">result</span>
+        <span class="table-name">alertnotification</span>
+        <span class="row-count">opérationnel</span>
+      </div>
+      <div class="fields">
+        <div class="field" data-tip="Identifiant unique de la notification d'alerte. Une alerte génère au moins 2 notifications : une à l'ouverture (create) et une à la clôture (close) de l'incident." data-tip-label="aln_id" data-tip-type="UUID · Clé primaire">
+          <span class="field-icon icon-pk">PK</span><span class="field-name is-pk">aln_id</span><span class="field-type">uuid</span></div>
+        <div class="field" data-tip="Identifiant de la règle d'alerte déclenchée : seuils, conditions de déclenchement, canaux de notification configurés par le client." data-tip-label="alr_id" data-tip-type="int · FK → alertrule">
+          <span class="field-icon icon-fk">FK</span><span class="field-name is-fk">alr_id</span><span class="field-type">int</span></div>
+        <div class="field" data-tip="Client (tenant) propriétaire de cette alerte. L'application est multi-tenant : chaque client a ses propres règles d'alerte et destinataires." data-tip-label="cli_id" data-tip-type="int · FK → client">
+          <span class="field-icon icon-fk">FK</span><span class="field-name is-fk">cli_id</span><span class="field-type">int</span></div>
+        <div class="field" data-tip="Scénario qui a déclenché cette alerte. Permet de retrouver immédiatement quel test de monitoring a détecté l'incident applicatif." data-tip-label="scn_id" data-tip-type="UUID · FK → scenario.scn_id">
+          <span class="field-icon icon-fk">FK</span><span class="field-name is-fk">scn_id</span><span class="field-type">uuid</span></div>
+        <div class="divider"></div>
+        <div class="field" data-tip="Moment exact de détection de l'incident (premier KO consécutif). Début de la fenêtre d'incident dans les rapports de disponibilité et calculs SLA." data-tip-label="aln_start_timestamp" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">aln_start_timestamp</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="Moment de résolution de l'incident (retour à OK). aln_end - aln_start = durée totale de l'indisponibilité, utilisée dans les rapports SLA clients." data-tip-label="aln_end_timestamp" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">aln_end_timestamp</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="Créneau planifié de l'exécution qui a déclenché l'alerte. Peut différer du timestamp réel si le robot avait du retard au démarrage." data-tip-label="aln_start_executiontime" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">aln_start_executiontime</span><span class="field-type">timestamp</span></div>
+        <div class="field" data-tip="Créneau planifié de l'exécution qui a clôturé l'alerte (premier retour à OK). Sert à calculer le nombre d'exécutions manquées pendant l'incident." data-tip-label="aln_end_executiontime" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">aln_end_executiontime</span><span class="field-type">timestamp</span></div>
+        <div class="field" data-tip="Liste des destinataires notifiés : canal (email / push / webhook), statut de la notification (create/close), dispatchId, langue, timezone. Trace complète de chaque envoi." data-tip-label="aln_recipients" data-tip-type="JSONB Array">
+          <span class="field-icon icon-json">[]</span><span class="field-name">aln_recipients</span><span class="field-type">jsonb</span></div>
+        <div class="field" data-tip="Type d'objet surveillé : 'SCENARIO' = alerte sur un scénario complet. Pourrait aussi couvrir des alertes sur des steps individuels ou des métriques spécifiques." data-tip-label="aln_type" data-tip-type="varchar · Enum">
+          <span class="field-icon icon-field">—</span><span class="field-name">aln_type</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip='Référence de l\'objet ayant déclenché l\'alerte : {"scn_id": "uuid..."} pour un scénario. Permet de reconstruire le contexte complet de l\'incident.' data-tip-label="aln_object" data-tip-type="JSONB">
+          <span class="field-icon icon-json">{}</span><span class="field-name">aln_object</span><span class="field-type">jsonb</span></div>
+      </div>
+    </div>
+
+    <!-- 5. result.result_rowdata -->
+    <div class="table-card card-result" id="t_result_rowdata" style="grid-column:1;grid-row:2">
+      <div class="table-header">
+        <span class="schema-badge badge-result">result</span>
+        <span class="table-name">result_rowdata</span>
+        <span class="row-count">opérationnel</span>
+      </div>
+      <div class="fields">
+        <div class="field" data-tip="Identifiant de l'exécution complète du scénario ex. '3bc63ed1.4'. Le suffixe numérique est l'index dans la session du planificateur." data-tip-label="rsl_executionid" data-tip-type="varchar · PK composite">
+          <span class="field-icon icon-pk">PK</span><span class="field-name is-pk">rsl_executionid</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Numéro du step dans le scénario (0, 1, 2...). Avec executionid forme la clé primaire. Un scénario génère autant de lignes que de steps définis dans le script." data-tip-label="rsl_stepid" data-tip-type="varchar · PK composite">
+          <span class="field-icon icon-pk">PK</span><span class="field-name is-pk">rsl_stepid</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Heure réelle de fin d'exécution de ce step sur le robot. Peut différer de planningtime si le slave a eu de la latence ou si des retries ont eu lieu." data-tip-label="rsl_timestamp" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">rsl_timestamp</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="Heure théorique planifiée ex. toutes les 15 min à H:00, H:15... Sert de clé de partitionnement et d'alignement temporel dans les graphes de disponibilité." data-tip-label="rsl_planningtime" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">rsl_planningtime</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="Heure réelle de début d'exécution du scénario sur le slave. rsl_starttime - rsl_planningtime = délai de démarrage du robot (latence du planificateur)." data-tip-label="rsl_starttime" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">rsl_starttime</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="Résultat de ce step : 1 = OK, 2 = DEGRADED (lent mais fonctionnel), 4 = KO (erreur détectée), 8 = THRESHOLD EXCEEDED. Valeur agrégée dans scenariostatus." data-tip-label="rsl_status" data-tip-type="int · Enum">
+          <span class="field-icon icon-field">—</span><span class="field-name">rsl_status</span><span class="field-type">int</span></div>
+        <div class="field" data-tip="Nombre de tentatives effectuées avant d'obtenir ce résultat. 0 = réussi du premier coup. Utile pour diagnostiquer les instabilités intermittentes." data-tip-label="rsl_nbretry" data-tip-type="int">
+          <span class="field-icon icon-field">—</span><span class="field-name">rsl_nbretry</span><span class="field-type">int</span></div>
+        <div class="field" data-tip="Scénario dont fait partie ce résultat de step. Permet de regrouper tous les steps d'une même exécution et de calculer le statut global." data-tip-label="scn_id" data-tip-type="UUID · FK → scenario.scn_id">
+          <span class="field-icon icon-fk">FK</span><span class="field-name is-fk">scn_id</span><span class="field-type">uuid</span></div>
+        <div class="field" data-tip="Site (point de mesure géographique) depuis lequel ce step a été exécuté. Permet de comparer les performances selon la localisation et l'opérateur réseau." data-tip-label="sit_id" data-tip-type="UUID · FK → site.sit_id">
+          <span class="field-icon icon-fk">FK</span><span class="field-name is-fk">sit_id</span><span class="field-type">uuid</span></div>
+        <div class="field" data-tip="Slave robot précis qui a exécuté ce step. Permet d'identifier si un problème de performance est propre à une machine ou généralisé à tout un site." data-tip-label="que_id" data-tip-type="varchar · FK → queue.que_id">
+          <span class="field-icon icon-fk">FK</span><span class="field-name is-fk">que_id</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Identifiant du planificateur qui a assigné cette tâche. Permet d'auditer la distribution de charge entre planificateurs dans les architectures multi-planner." data-tip-label="pln_id" data-tip-type="varchar">
+          <span class="field-icon icon-field">—</span><span class="field-name">pln_id</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Durée totale d'exécution du scénario complet (tous les steps cumulés) ex. 'PT27.913S' = 27.9 secondes. Valeur principale pour le calcul SLA." data-tip-label="rsl_duration" data-tip-type="interval · ISO 8601">
+          <span class="field-icon icon-field">—</span><span class="field-name">rsl_duration</span><span class="field-type">interval</span></div>
+        <div class="field" data-tip="Tableau de toutes les métriques mesurées pour ce step : time_redirect, time_connect, time_request, time_pageload, nb_dom_elements, eco_index, Web Vitals (CLS, LCP, FCP, TTFB)..." data-tip-label="rsl_metric" data-tip-type="JSONB Array">
+          <span class="field-icon icon-json">[]</span><span class="field-name">rsl_metric</span><span class="field-type">jsonb</span></div>
+        <div class="field" data-tip="Nom lisible du step défini dans le script ex. 'Connexion', 'Affichage Ecritures Période N', 'Deconnexion'. Affiché dans les rapports et les alertes." data-tip-label="rsl_stepname" data-tip-type="varchar">
+          <span class="field-icon icon-field">—</span><span class="field-name">rsl_stepname</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="true = step neutre non comptabilisé dans le statut global. Pour des steps de setup/cleanup qui ne doivent pas affecter la disponibilité calculée." data-tip-label="rsl_isneutral" data-tip-type="boolean">
+          <span class="field-icon icon-field">—</span><span class="field-name">rsl_isneutral</span><span class="field-type">boolean</span></div>
+        <div class="field" data-tip="true = résultat exclu des calculs SLA (maintenance planifiée, anomalie connue). L'exécution est conservée pour l'historique mais ignorée dans les rapports de disponibilité." data-tip-label="rsl_isexcluded" data-tip-type="boolean">
+          <span class="field-icon icon-field">—</span><span class="field-name">rsl_isexcluded</span><span class="field-type">boolean</span></div>
+      </div>
+    </div>
+
+    <!-- 6. result.resultdiagcontent -->
+    <div class="table-card card-result" id="t_resultdiagcontent" style="grid-column:2;grid-row:2">
+      <div class="table-header">
+        <span class="schema-badge badge-result">result</span>
+        <span class="table-name">resultdiagcontent</span>
+        <span class="row-count">opérationnel</span>
+      </div>
+      <div class="fields">
+        <div class="field" data-tip="Identifiant unique du fichier de diagnostic. Un même step peut générer plusieurs fichiers : screenshot PNG, trace réseau HAR, trace Chrome JSON, analyse tiers." data-tip-label="dig_id" data-tip-type="UUID · Clé primaire">
+          <span class="field-icon icon-pk">PK</span><span class="field-name is-pk">dig_id</span><span class="field-type">uuid</span></div>
+        <div class="field" data-tip="Bucket de stockage objet où est archivé ce fichier ex. 'ekara-diag-prod'. Correspond à un bucket MinIO ou S3 selon l'environnement de déploiement." data-tip-label="dic_location" data-tip-type="varchar">
+          <span class="field-icon icon-field">—</span><span class="field-name">dic_location</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Horodatage de création / upload du fichier de diagnostic dans le stockage objet. Permet de corréler avec le timestamp du résultat d'exécution correspondant." data-tip-label="dic_timestamp" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">dic_timestamp</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="Type de stockage utilisé : 'MINIO-GATEWAY' = gateway MinIO compatible S3. Permet à l'API de savoir comment récupérer et afficher le fichier dans l'interface." data-tip-label="dic_storage" data-tip-type="varchar">
+          <span class="field-icon icon-field">—</span><span class="field-name">dic_storage</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Client propriétaire de ce diagnostic. Garantit l'isolation des données : un client ne peut jamais accéder aux diagnostics d'un autre client." data-tip-label="cli_id" data-tip-type="int · FK → client">
+          <span class="field-icon icon-fk">FK</span><span class="field-name is-fk">cli_id</span><span class="field-type">int</span></div>
+        <div class="field" data-tip="Chemin complet du fichier dans le bucket, structuré par type et date : 'PNG/20251225/uuid.png', 'HAR/20251225/uuid.har', 'TRACE_CHROME/20251225/uuid.json'." data-tip-label="dic_key" data-tip-type="varchar">
+          <span class="field-icon icon-field">—</span><span class="field-name">dic_key</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Heure planifiée de l'exécution associée. Permet de retrouver et regrouper tous les fichiers diagnostics d'une même fenêtre de monitoring." data-tip-label="dic_planningtime" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">dic_planningtime</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="true = fichier compressé en gzip avant stockage (JSON, HAR, TXT volumineux). false = fichier brut (PNG, images). Décompression automatique à la lecture par l'API." data-tip-label="dic_gzip" data-tip-type="boolean">
+          <span class="field-icon icon-field">—</span><span class="field-name">dic_gzip</span><span class="field-type">boolean</span></div>
+        <div class="field" data-tip="Empreinte SHA256 du contenu du fichier. NULL pour les fichiers compressés. Permet de détecter les doublons et de vérifier l'intégrité des captures d'écran." data-tip-label="dic_hash" data-tip-type="varchar · SHA256">
+          <span class="field-icon icon-field">—</span><span class="field-name">dic_hash</span><span class="field-type">varchar</span></div>
+      </div>
+    </div>
+
+    <!-- 7. result.scenariostatus -->
+    <div class="table-card card-result2" id="t_scenariostatus" style="grid-column:3;grid-row:2">
+      <div class="table-header">
+        <span class="schema-badge badge-result">result</span>
+        <span class="table-name">scenariostatus</span>
+        <span class="row-count">opérationnel</span>
+      </div>
+      <div class="fields">
+        <div class="field" data-tip="Scénario dont on enregistre le statut global. Combiné avec sit_id et planningtime, forme la clé primaire composite identifiant une exécution unique." data-tip-label="scn_id" data-tip-type="UUID · FK → scenario · PK">
+          <span class="field-icon icon-fk">FK</span><span class="field-name is-fk">scn_id</span><span class="field-type">uuid</span></div>
+        <div class="field" data-tip="Site d'exécution. Un même scénario peut tourner depuis plusieurs sites simultanément pour comparer les performances selon la géographie et l'opérateur réseau." data-tip-label="sit_id" data-tip-type="UUID · FK → site · PK">
+          <span class="field-icon icon-fk">FK</span><span class="field-name is-fk">sit_id</span><span class="field-type">uuid</span></div>
+        <div class="field" data-tip="Créneau planifié de l'exécution ex. 00:00, 00:15, 00:30... Avec scn_id et sit_id, identifie de façon unique un résultat d'exécution périodique. Clé de partitionnement." data-tip-label="scs_planningtime" data-tip-type="Timestamp · PK composite">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">scs_planningtime</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="Heure réelle de début d'exécution sur le slave. Légèrement postérieure à planningtime selon la charge du planificateur et la disponibilité des slaves." data-tip-label="scs_timestamp" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">scs_timestamp</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="Statut agrégé du scénario entier : 1 = OK, 2 = DEGRADED (lent), 4 = KO (incident actif), 8 = THRESHOLD EXCEEDED. C'est ce statut qui s'affiche dans les dashboards et déclenche les alertes." data-tip-label="scs_status" data-tip-type="int · Enum">
+          <span class="field-icon icon-field">—</span><span class="field-name">scs_status</span><span class="field-type">int</span></div>
+        <div class="field" data-tip="Fréquence d'exécution en format ISO 8601 : 'PT5M' = toutes les 5 min, 'PT15M' = toutes les 15 min, 'PT1H' = toutes les heures. Définit la granularité du monitoring." data-tip-label="scs_period" data-tip-type="varchar · ISO 8601">
+          <span class="field-icon icon-field">—</span><span class="field-name">scs_period</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Lien vers result_rowdata via rsl_executionid. Permet de naviguer du statut global vers le détail step-by-step et les métriques de performance." data-tip-label="scs_executionid" data-tip-type="varchar · lien → result_rowdata">
+          <span class="field-icon icon-field">—</span><span class="field-name">scs_executionid</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Client propriétaire du résultat. Isolation multi-tenant stricte : chaque client ne voit que ses propres données de monitoring." data-tip-label="cli_id" data-tip-type="int · FK → client">
+          <span class="field-icon icon-fk">FK</span><span class="field-name is-fk">cli_id</span><span class="field-type">int</span></div>
+        <div class="field" data-tip="Heure d'insertion en base. Permet de mesurer la latence entre la fin d'exécution sur le robot et la disponibilité du résultat dans l'interface de monitoring." data-tip-label="scs_inserttime" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">scs_inserttime</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="Durée totale d'exécution du scénario complet ex. 'PT27.913S'. Valeur principale pour le calcul des SLA et la comparaison avec le seuil configuré (scn_threshold)." data-tip-label="scs_duration" data-tip-type="interval · ISO 8601">
+          <span class="field-icon icon-field">—</span><span class="field-name">scs_duration</span><span class="field-type">interval</span></div>
+        <div class="field" data-tip="true = exécution exclue des calculs SLA (maintenance planifiée, exclusion manuelle). L'exécution est conservée pour l'historique mais ignorée dans la disponibilité." data-tip-label="scs_isexcluded" data-tip-type="boolean">
+          <span class="field-icon icon-field">—</span><span class="field-name">scs_isexcluded</span><span class="field-type">boolean</span></div>
+        <div class="field" data-tip='Liste des steps en échec avec ID et nom ex. [{"id": "0", "name": "Fnac Website"}]. Permet d\'afficher rapidement quel step a bloqué sans relire toutes les métriques détaillées.' data-tip-label="scs_failedsteps" data-tip-type="JSONB Array">
+          <span class="field-icon icon-json">[]</span><span class="field-name">scs_failedsteps</span><span class="field-type">jsonb</span></div>
+        <div class="field" data-tip="Slave robot ayant réalisé cette exécution. Essentiel pour distinguer si un problème de performance est lié à la machine slave ou à l'application surveillée." data-tip-label="que_id" data-tip-type="varchar · FK → queue.que_id">
+          <span class="field-icon icon-fk">FK</span><span class="field-name is-fk">que_id</span><span class="field-type">varchar</span></div>
+        <div class="field" data-tip="Valeur de la métrique ayant dépassé le seuil ex. 'PT2.114S' signifie que la durée était 2.1s au-dessus du seuil configuré. NULL = pas de dépassement." data-tip-label="scs_thresholdexceeded" data-tip-type="varchar · ISO 8601">
+          <span class="field-icon icon-field">—</span><span class="field-name">scs_thresholdexceeded</span><span class="field-type">varchar</span></div>
+      </div>
+    </div>
+
+    <!-- 8. result.scenariostatus_range -->
+    <div class="table-card card-result2" id="t_scenariostatus_range" style="grid-column:4;grid-row:2">
+      <div class="table-header">
+        <span class="schema-badge badge-result">result</span>
+        <span class="table-name">scenariostatus_range</span>
+        <span class="row-count">opérationnel</span>
+      </div>
+      <div class="fields">
+        <div class="field" data-tip="Scénario concerné par cette plage de statut continu. Un incident = une ligne : même statut de ssr_starttime à ssr_endtime sans interruption." data-tip-label="scn_id" data-tip-type="UUID · FK → scenario · PK">
+          <span class="field-icon icon-fk">FK</span><span class="field-name is-fk">scn_id</span><span class="field-type">uuid</span></div>
+        <div class="field" data-tip="Client propriétaire. Avec scn_id et ssr_starttime forme la clé primaire composite de cette table de plages temporelles d'incident." data-tip-label="cli_id" data-tip-type="int · FK → client · PK">
+          <span class="field-icon icon-fk">FK</span><span class="field-name is-fk">cli_id</span><span class="field-type">int</span></div>
+        <div class="field" data-tip="Début de la plage où le statut est resté identique. Pour un incident KO : heure du premier échec consécutif ayant dépassé le nombre de retries autorisés." data-tip-label="ssr_starttime" data-tip-type="Timestamp · PK composite">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">ssr_starttime</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="Fin de la plage : moment où le statut a changé (ex. retour à OK). ssr_endtime - ssr_starttime = durée réelle de l'incident. Mis à jour en temps réel pendant l'incident." data-tip-label="ssr_endtime" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">ssr_endtime</span><span class="field-type">timestamptz</span></div>
+        <div class="field" data-tip="Statut ayant prévalu pendant toute cette plage : 1 = OK, 2 = DEGRADED, 4 = KO (incident actif), 8 = THRESHOLD EXCEEDED. Même échelle que scs_status." data-tip-label="ssr_status" data-tip-type="int · Enum">
+          <span class="field-icon icon-field">—</span><span class="field-name">ssr_status</span><span class="field-type">int</span></div>
+        <div class="field" data-tip="Liste de toutes les exécutions constituant cette plage, avec pour chacune : site, statut, executionId, planningTime, thresholdExceeded. Historique complet de l'incident." data-tip-label="ssr_exec_list" data-tip-type="JSONB Array">
+          <span class="field-icon icon-json">[]</span><span class="field-name">ssr_exec_list</span><span class="field-type">jsonb</span></div>
+        <div class="field" data-tip="Heure d'insertion ou dernière mise à jour de cette plage. Une plage d'incident ouverte (KO en cours) est mise à jour à chaque nouvelle exécution KO reçue." data-tip-label="ssr_inserttime" data-tip-type="Timestamp">
+          <span class="field-icon icon-ts">TS</span><span class="field-name">ssr_inserttime</span><span class="field-type">timestamptz</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Tooltip global -->
+<div id="tooltip" class="tip"></div>
+
+<div class="legend">
+  <div class="legend-item"><div class="li-dot" style="background:var(--accent6)"></div> PK — Clé primaire</div>
+  <div class="legend-item"><div class="li-dot" style="background:var(--accent2)"></div> FK — Clé étrangère</div>
+  <div class="legend-item"><div class="li-dot" style="background:var(--accent4)"></div> JSONB</div>
+  <div class="legend-item"><div class="li-dot" style="background:var(--accent5)"></div> Timestamp</div>
+  <div class="legend-item"><div class="li-dot" style="background:var(--accent3)"></div> reference.* — Tables de référence (configuration)</div>
+  <div class="legend-item"><div class="li-dot" style="background:var(--accent1)"></div> result.* — Données d'exécution</div>
+  <span style="font-size:.6rem;color:var(--muted);margin-left:auto">💡 Survolez un champ pour voir son explication métier</span>
+</div>
+
+<div class="rel-section">
+  <div class="rel-title">Relations entre tables</div>
+  <div class="relations">
+    <div class="rel-chip"><span class="from">alertnotification</span><span class="arrow">→</span><span class="to">scenario</span><span class="col">(scn_id)</span></div>
+    <div class="rel-chip"><span class="from">result_rowdata</span><span class="arrow">→</span><span class="to">scenario</span><span class="col">(scn_id)</span></div>
+    <div class="rel-chip"><span class="from">result_rowdata</span><span class="arrow">→</span><span class="to">site</span><span class="col">(sit_id)</span></div>
+    <div class="rel-chip"><span class="from">result_rowdata</span><span class="arrow">→</span><span class="to">queue</span><span class="col">(que_id)</span></div>
+    <div class="rel-chip"><span class="from">scenariostatus</span><span class="arrow">→</span><span class="to">scenario</span><span class="col">(scn_id)</span></div>
+    <div class="rel-chip"><span class="from">scenariostatus</span><span class="arrow">→</span><span class="to">site</span><span class="col">(sit_id)</span></div>
+    <div class="rel-chip"><span class="from">scenariostatus</span><span class="arrow">→</span><span class="to">queue</span><span class="col">(que_id)</span></div>
+    <div class="rel-chip"><span class="from">scenariostatus_range</span><span class="arrow">→</span><span class="to">scenario</span><span class="col">(scn_id)</span></div>
+    <div class="rel-chip"><span class="from">queue</span><span class="arrow">→</span><span class="to">site</span><span class="col">(sit_id)</span></div>
+  </div>
+</div>
+
+<script>
+  // ── Tooltip logic ──
+  const tooltip = document.getElementById('tooltip');
+  document.querySelectorAll('.field[data-tip]').forEach(el => {
+    el.addEventListener('mouseenter', e => {
+      const label = el.dataset.tipLabel || '';
+      const type  = el.dataset.tipType  || '';
+      const text  = el.dataset.tip      || '';
+      tooltip.innerHTML = `<strong>${label}</strong><span class="tip-type">${type}</span>${text}`;
+      tooltip.style.display = 'block';
+      positionTip(e);
+    });
+    el.addEventListener('mousemove', e => positionTip(e));
+    el.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+  });
+
+  function positionTip(e) {
+    const W = window.innerWidth, H = window.innerHeight;
+    const tw = 238, th = 120;
+    let x = e.clientX + 14;
+    let y = e.clientY - 10;
+    if (x + tw > W - 10) x = e.clientX - tw - 14;
+    if (y + th > H - 10) y = H - th - 10;
+    tooltip.style.left = x + 'px';
+    tooltip.style.top  = y + 'px';
+  }
+
+  // ── SVG relation lines ──
+  const relations = [
+    ['t_alertnotification','t_scenario','#a78bfa'],
+    ['t_result_rowdata','t_scenario','#a78bfa'],
+    ['t_result_rowdata','t_site','#34d399'],
+    ['t_result_rowdata','t_queue','#34d399'],
+    ['t_scenariostatus','t_scenario','#a78bfa'],
+    ['t_scenariostatus','t_site','#34d399'],
+    ['t_scenariostatus','t_queue','#34d399'],
+    ['t_scenariostatus_range','t_scenario','#a78bfa'],
+    ['t_queue','t_site','#34d399'],
+  ];
+
+  function drawLines() {
+    const svg = document.getElementById('svgLines');
+    svg.innerHTML = '';
+    const svgR = svg.getBoundingClientRect();
+
+    relations.forEach(([from, to, color]) => {
+      const f = document.getElementById(from);
+      const t = document.getElementById(to);
+      if (!f || !t) return;
+      const fr = f.getBoundingClientRect();
+      const tr = t.getBoundingClientRect();
+
+      const fy = fr.top - svgR.top + fr.height / 2;
+      const ty = tr.top - svgR.top + tr.height / 2;
+      const frCx = fr.left - svgR.left + fr.width / 2;
+      const trCx = tr.left - svgR.left + tr.width / 2;
+
+      let x1, x2;
+      if (frCx <= trCx) { x1 = fr.right - svgR.left; x2 = tr.left - svgR.left; }
+      else               { x1 = fr.left  - svgR.left; x2 = tr.right - svgR.left; }
+
+      const cp = Math.abs(x2 - x1) * 0.42;
+      const dir = x2 > x1 ? 1 : -1;
+
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', `M ${x1} ${fy} C ${x1 + cp * dir} ${fy}, ${x2 - cp * dir} ${ty}, ${x2} ${ty}`);
+      path.setAttribute('stroke', color);
+      path.setAttribute('stroke-width', '1.5');
+      path.setAttribute('stroke-dasharray', '5,4');
+      path.setAttribute('fill', 'none');
+      path.setAttribute('opacity', '0.32');
+      svg.appendChild(path);
+
+      const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      arrow.setAttribute('points', `${x2},${ty} ${x2 - 6 * dir},${ty - 4} ${x2 - 6 * dir},${ty + 4}`);
+      arrow.setAttribute('fill', color);
+      arrow.setAttribute('opacity', '0.55');
+      svg.appendChild(arrow);
+    });
+  }
+
+  window.addEventListener('load', () => setTimeout(drawLines, 150));
+  window.addEventListener('resize', drawLines);
+</script>
+</body>
+</html>

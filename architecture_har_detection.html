@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Architecture — Détection d'Incidents HAR</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #07080a;
+  --bg1:     #0c0e12;
+  --bg2:     #111318;
+  --bg3:     #171b22;
+  --bg4:     #1d2230;
+  --line:    #1f2535;
+  --line2:   #283045;
+  --t1:      #00d4ff;   /* cyan — requêtes */
+  --t2:      #a78bfa;   /* violet — steps */
+  --t3:      #f59e0b;   /* amber — scénarios */
+  --m1:      #10b981;   /* vert — modèle 1 */
+  --m2:      #ef4444;   /* rouge — modèle 2 */
+  --base:    #3b82f6;   /* bleu — baseline */
+  --key:     #f97316;   /* orange — clé */
+  --text:    #dde3f0;
+  --muted:   #4a5568;
+  --dim:     #64748b;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:13px;line-height:1.6;min-height:100vh}
+
+/* NAV */
+nav{position:sticky;top:0;z-index:99;background:rgba(7,8,10,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--line2);display:flex;align-items:center;gap:0;padding:0 32px;height:48px}
+.nav-logo{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-right:32px;flex-shrink:0}
+.nav-links{display:flex;gap:2px}
+.nav-a{padding:5px 12px;border-radius:4px;font-size:11px;font-weight:500;color:var(--dim);text-decoration:none;transition:.12s;letter-spacing:.3px}
+.nav-a:hover{color:var(--text);background:var(--bg4)}
+
+/* HERO */
+.hero{padding:64px 48px 40px;max-width:1400px;margin:0 auto;border-bottom:1px solid var(--line)}
+.hero-tag{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:16px}
+.hero h1{font-size:36px;font-weight:700;line-height:1.15;letter-spacing:-.5px;margin-bottom:12px}
+.hero h1 span{color:var(--t3)}
+.hero-sub{font-size:15px;color:var(--dim);max-width:720px;line-height:1.7}
+
+/* MAIN LAYOUT */
+.main{max-width:1400px;margin:0 auto;padding:0 48px 80px}
+
+/* SECTION */
+.sec{padding:48px 0 0}
+.sec-label{font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.sec-label::after{content:'';flex:1;height:1px;background:var(--line)}
+.sec h2{font-size:22px;font-weight:700;margin-bottom:6px;letter-spacing:-.3px}
+.sec p{color:var(--dim);font-size:13px;line-height:1.7;max-width:900px;margin-bottom:24px}
+
+/* FLOW DIAGRAM */
+.flow{display:grid;grid-template-columns:1fr;gap:0;position:relative;margin:32px 0}
+
+.flow-row{display:grid;gap:12px;position:relative;margin-bottom:0}
+.flow-row-3{grid-template-columns:1fr 1fr 1fr}
+.flow-row-2{grid-template-columns:1fr 1fr}
+.flow-row-1{grid-template-columns:1fr}
+
+.arrow-down{display:flex;justify-content:center;align-items:center;padding:12px 0;color:var(--muted);font-size:20px;position:relative}
+.arrow-down::before{content:'';position:absolute;top:0;bottom:50%;left:50%;width:1px;background:var(--line2)}
+.arrow-down::after{content:'';position:absolute;top:50%;bottom:0;left:50%;width:1px;background:var(--line2)}
+.arrow-sym{position:relative;z-index:2;background:var(--bg);padding:0 8px;font-size:16px}
+
+.arrow-merge{display:flex;justify-content:center;padding:12px 0;position:relative}
+.arrow-merge::before{content:'';position:absolute;top:0;left:16.7%;right:83.3%;height:50%;border-left:1px solid var(--line2)}
+.arrow-merge::after{content:'';position:absolute;top:0;left:50%;right:50%;height:50%;border-left:1px solid var(--line2)}
+
+/* BOXES */
+.box{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:20px;position:relative;overflow:hidden}
+.box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.box.t1::before{background:var(--t1)}
+.box.t2::before{background:var(--t2)}
+.box.t3::before{background:var(--t3)}
+.box.m1::before{background:var(--m1)}
+.box.m2::before{background:var(--m2)}
+.box.base::before{background:var(--base)}
+.box.key::before{background:var(--key)}
+.box.hybrid::before{background:linear-gradient(90deg,var(--m1),var(--m2))}
+
+.box-tag{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:8px}
+.box.t1 .box-tag{color:var(--t1)}
+.box.t2 .box-tag{color:var(--t2)}
+.box.t3 .box-tag{color:var(--t3)}
+.box.m1 .box-tag{color:var(--m1)}
+.box.m2 .box-tag{color:var(--m2)}
+.box.base .box-tag{color:var(--base)}
+.box.key .box-tag{color:var(--key)}
+.box.hybrid .box-tag{color:var(--m1)}
+
+.box h3{font-size:15px;font-weight:700;margin-bottom:4px;letter-spacing:-.2px}
+.box p{font-size:11px;color:var(--dim);line-height:1.6}
+.box-badge{display:inline-block;padding:2px 8px;border-radius:3px;font-family:var(--mono);font-size:9px;font-weight:700;margin-top:8px}
+.badge-t1{background:rgba(0,212,255,.12);color:var(--t1)}
+.badge-t2{background:rgba(167,139,250,.12);color:var(--t2)}
+.badge-t3{background:rgba(245,158,11,.12);color:var(--t3)}
+.badge-m1{background:rgba(16,185,129,.12);color:var(--m1)}
+.badge-m2{background:rgba(239,68,68,.12);color:var(--m2)}
+.badge-base{background:rgba(59,130,246,.12);color:var(--base)}
+.badge-key{background:rgba(249,115,22,.12);color:var(--key)}
+
+/* FEATURE TABLES */
+.ftable{width:100%;border-collapse:collapse;font-size:11px;margin-top:16px}
+.ftable th{padding:6px 12px;text-align:left;font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);background:var(--bg3);border-bottom:1px solid var(--line2)}
+.ftable td{padding:5px 12px;border-bottom:1px solid var(--line);font-family:var(--mono);vertical-align:top}
+.ftable td:first-child{color:var(--t1);font-weight:600;white-space:nowrap}
+.ftable td:nth-child(2){color:var(--dim)}
+.ftable td:nth-child(3){color:var(--text)}
+.ftable.t2 td:first-child{color:var(--t2)}
+.ftable.t3 td:first-child{color:var(--t3)}
+.ftable.key-t td:first-child{color:var(--key)}
+.ftable.base-t td:first-child{color:var(--base)}
+.ftable tr:hover td{background:rgba(255,255,255,.02)}
+.tbl-wrap{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:16px}
+.tbl-scroll{overflow-x:auto;max-height:520px;overflow-y:auto}
+
+/* GRID UTILS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:16px}
+@media(max-width:1100px){.g4{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.g2,.g3,.g4,.flow-row-3,.flow-row-2{grid-template-columns:1fr}.main{padding:0 20px 60px}.hero{padding:40px 20px 32px}}
+
+/* CARD */
+.card{background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:18px}
+.card-label{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.card-value{font-family:var(--mono);font-size:22px;font-weight:700;line-height:1}
+.card-sub{font-size:10px;color:var(--dim);margin-top:4px;line-height:1.5}
+
+/* CODE BLOCK */
+pre{background:var(--bg1);border:1px solid var(--line2);border-radius:8px;padding:18px 20px;font-family:var(--mono);font-size:11px;overflow-x:auto;line-height:1.7;margin-top:12px}
+.c-kw{color:#a78bfa}
+.c-fn{color:#22d3ee}
+.c-st{color:#34d399}
+.c-cm{color:#374151;font-style:italic}
+.c-nb{color:#f59e0b}
+.c-op{color:#f97316}
+
+/* STEP BADGE */
+.step-num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:50%;font-family:var(--mono);font-size:12px;font-weight:700;flex-shrink:0}
+.step-t1{background:rgba(0,212,255,.12);color:var(--t1);border:1px solid rgba(0,212,255,.25)}
+.step-m1{background:rgba(16,185,129,.12);color:var(--m1);border:1px solid rgba(16,185,129,.25)}
+.step-m2{background:rgba(239,68,68,.12);color:var(--m2);border:1px solid rgba(239,68,68,.25)}
+.step-base{background:rgba(59,130,246,.12);color:var(--base);border:1px solid rgba(59,130,246,.25)}
+
+/* TIMELINE */
+.timeline{margin-top:24px;display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:20px;align-items:flex-start}
+.tl-left{display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0}
+.tl-line{width:1px;flex:1;background:var(--line2);min-height:24px}
+.tl-body{padding-bottom:28px;flex:1}
+.tl-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.tl-desc{font-size:11px;color:var(--dim);line-height:1.6}
+
+/* HIGHLIGHT CALLOUT */
+.callout{background:var(--bg3);border:1px solid var(--line2);border-left:3px solid var(--t3);border-radius:0 8px 8px 0;padding:14px 18px;margin:16px 0;font-size:12px;color:var(--dim);line-height:1.7}
+.callout strong{color:var(--text)}
+.callout.red{border-left-color:var(--m2)}
+.callout.green{border-left-color:var(--m1)}
+.callout.blue{border-left-color:var(--base)}
+.callout.orange{border-left-color:var(--key)}
+
+/* PILL */
+.pill{display:inline-block;padding:1px 7px;border-radius:3px;font-family:var(--mono);font-size:9px;font-weight:700}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+
+/* CONNECTOR VISUAL */
+.connector-box{border:1px dashed var(--line2);border-radius:8px;padding:14px;background:var(--bg1);margin:8px 0;font-family:var(--mono);font-size:10px;color:var(--dim);line-height:1.8}
+.connector-box span{display:block}
+.connector-box .hi-t1{color:var(--t1)}
+.connector-box .hi-t3{color:var(--t3)}
+.connector-box .hi-m1{color:var(--m1)}
+.connector-box .hi-key{color:var(--key)}
+.connector-box .hi-base{color:var(--base)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">HAR · Arch v5</div>
+  <div class="nav-links">
+    <a class="nav-a" href="#pipeline">Pipeline</a>
+    <a class="nav-a" href="#tableaux">Tableaux</a>
+    <a class="nav-a" href="#baseline-key">Clé Baseline</a>
+    <a class="nav-a" href="#baseline">Baseline</a>
+    <a class="nav-a" href="#modele1">Modèle 1</a>
+    <a class="nav-a" href="#modele2">Modèle 2</a>
+    <a class="nav-a" href="#features">Features complètes</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-tag">Architecture Finale · Détection d'Incidents</div>
+  <h1>Système Hybride de Détection<br>d'Incidents à partir de <span>Fichiers HAR</span></h1>
+  <p class="hero-sub">Un pipeline en deux étapes : Modèle 1 score chaque requête HTTP individuellement par rapport à sa baseline contextuelle, puis Modèle 2 agrège ces scores avec les features du scénario pour décider s'il y a un incident.</p>
+</div>
+
+<div class="main">
+
+<!-- ═══════════════════════ PIPELINE GLOBAL ═══════════════════════ -->
+<div class="sec" id="pipeline">
+  <div class="sec-label">Vue d'ensemble</div>
+  <h2>Pipeline Complet</h2>
+  <p>Depuis un fichier HAR unique, trois tableaux sont construits simultanément. Modèle 1 s'entraîne sur T1, scores agrégés → T3 enrichi → Modèle 2 décide.</p>
+
+  <!-- FLOW -->
+  <div class="flow">
+
+    <!-- HAR SOURCE -->
+    <div class="flow-row flow-row-1">
+      <div class="box key">
+        <div class="box-tag">Entrée</div>
+        <h3>📁 Fichier HAR unique</h3>
+        <p>Un fichier HAR = un scénario complet de navigation (connexion → consultation → action). Contient toutes les requêtes HTTP horodatées avec leurs timings détaillés.</p>
+        <span class="box-badge badge-key">HAR 1.2 Standard</span>
+        <span class="box-badge badge-key" style="margin-left:6px">N requêtes · K steps</span>
+      </div>
+    </div>
+
+    <div class="arrow-down"><span class="arrow-sym">↓ extraction simultanée</span></div>
+
+    <!-- 3 TABLEAUX -->
+    <div class="flow-row flow-row-3">
+      <div class="box t1">
+        <div class="box-tag">Tableau T1</div>
+        <h3>Requêtes</h3>
+        <p>1 ligne par requête HTTP. Tous les timings, headers, codes, tailles. Features pour le scoring individuel + clé de baseline.</p>
+        <br>
+        <span class="box-badge badge-t1">258 lignes × ~131 features</span>
+      </div>
+      <div class="box t2">
+        <div class="box-tag">Tableau T2</div>
+        <h3>Steps</h3>
+        <p>1 ligne par étape du parcours. Agrégats des requêtes du step : TTFB, taux d'erreur, variabilité, dégradation progressive.</p>
+        <br>
+        <span class="box-badge badge-t2">6 lignes × ~78 features</span>
+      </div>
+      <div class="box t3">
+        <div class="box-tag">Tableau T3</div>
+        <h3>Scénarios</h3>
+        <p>1 ligne par fichier HAR. Statistiques globales du scénario + features de détection d'incident. Reçoit les scores du Modèle 1.</p>
+        <br>
+        <span class="box-badge badge-t3">1 ligne × ~151+ features</span>
+      </div>
+    </div>
+
+    <div class="arrow-down"><span class="arrow-sym">↓</span></div>
+
+    <!-- BASELINE KEY -->
+    <div class="flow-row flow-row-2">
+      <div class="box key">
+        <div class="box-tag">Étape clé</div>
+        <h3>🔑 Génération de la Clé Baseline</h3>
+        <p>Pour chaque ligne de T1, on calcule une <strong style="color:var(--key)">clé composite</strong> qui identifie le <em>type fonctionnel</em> de la requête : méthode + domaine + path normalisé + paramètres fonctionnels. Cette clé permet de comparer chaque requête <strong style="color:var(--text)">uniquement à ses semblables</strong>, pas à toutes les requêtes du HAR.</p>
+        <div class="connector-box" style="margin-top:12px">
+          <span class="hi-key">baseline_key = hash(</span>
+          <span style="padding-left:16px">method <span style="color:var(--dim)">+</span> <span class="hi-t1">domain</span> <span class="hi-key">+</span> <span class="hi-t1">path_normalized</span> <span class="hi-key">+</span></span>
+          <span style="padding-left:16px"><span class="hi-t1">functional_params_keys</span> <span class="hi-key">+</span> <span class="hi-t1">resource_type</span></span>
+          <span class="hi-key">)</span>
+        </div>
+      </div>
+      <div class="box base">
+        <div class="box-tag">Stockage</div>
+        <h3>📊 Baseline par Clé</h3>
+        <p>Deux baselines en parallèle pour chaque clé unique. Absorbe la dérive lente (app qui évolue) tout en conservant une référence stable.</p>
+        <div class="g2" style="margin-top:12px;gap:10px">
+          <div style="background:var(--bg3);border:1px solid var(--line2);border-radius:6px;padding:12px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--base);font-weight:700;letter-spacing:1.5px;margin-bottom:4px">FIGÉE · 50 RUNS</div>
+            <div style="font-size:11px;color:var(--dim);line-height:1.5">Référence stable. Absorbe la dérive sur 3 mois. Réinitialisée manuellement après une mise en production.</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--line2);border-radius:6px;padding:12px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--t2);font-weight:700;letter-spacing:1.5px;margin-bottom:4px">GLISSANTE · 10 RUNS</div>
+            <div style="font-size:11px;color:var(--dim);line-height:1.5">Suit l'évolution récente. Derniers 10 exécutions normaux. Détecte les dérives progressives.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><span class="arrow-sym">↓</span></div>
+
+    <!-- MODÈLE 1 -->
+    <div class="flow-row flow-row-1">
+      <div class="box m1">
+        <div class="box-tag">Modèle 1 — Per-Request Scorer</div>
+        <h3>🤖 Isolation Forest par Clé Baseline</h3>
+        <p>Un modèle par clé baseline. Chaque requête est comparée à ses pairs historiques (même méthode, même endpoint, même type). Produit un score d'anomalie entre 0 et 1 pour chaque requête.</p>
+        <div class="g3" style="margin-top:12px;gap:10px">
+          <div style="background:var(--bg3);border:1px solid var(--line2);border-radius:6px;padding:10px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--m1);font-weight:700;letter-spacing:1px;margin-bottom:3px">ALGORITHME</div>
+            <div style="font-size:10px;color:var(--dim)">Isolation Forest<br>— non supervisé<br>— robuste aux outliers<br>— contamination=0.05</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--line2);border-radius:6px;padding:10px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--m1);font-weight:700;letter-spacing:1px;margin-bottom:3px">FEATURES</div>
+            <div style="font-size:10px;color:var(--dim)">timing_total_ms<br>timing_wait_ms<br>response_body_size<br>timing_blocked_ms<br>timing_ratio_wait<br>+ ~20 autres</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--line2);border-radius:6px;padding:10px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--m1);font-weight:700;letter-spacing:1px;margin-bottom:3px">OUTPUT</div>
+            <div style="font-size:10px;color:var(--dim)">score_if ∈ [0,1]<br>score_if_fixed<br>score_if_sliding<br>+ écart vs baseline<br>+ rang percentile</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><span class="arrow-sym">↓ agrégation des scores par scénario</span></div>
+
+    <!-- AGRÉGATION → T3 enrichi -->
+    <div class="flow-row flow-row-1">
+      <div class="box t3" style="border-color:rgba(245,158,11,.3)">
+        <div class="box-tag">T3 enrichi</div>
+        <h3>📊 Scénario + Scores Modèle 1 agrégés</h3>
+        <p>Les scores individuels du Modèle 1 sont agrégés (mean, max, p95, p99) et ajoutés comme nouvelles colonnes dans T3. Séparation par type de ressource pour capturer quels types sont anormaux.</p>
+        <div class="g4" style="margin-top:12px;gap:10px">
+          <div class="connector-box" style="margin:0">
+            <span class="hi-m1">model1_score_mean</span>
+            <span style="color:var(--dim)">Moyenne globale</span>
+          </div>
+          <div class="connector-box" style="margin:0">
+            <span class="hi-m1">model1_score_max</span>
+            <span style="color:var(--dim)">Requête la + anormale</span>
+          </div>
+          <div class="connector-box" style="margin:0">
+            <span class="hi-m1">model1_score_p95</span>
+            <span style="color:var(--dim)">Seuil percentile 95</span>
+          </div>
+          <div class="connector-box" style="margin:0">
+            <span class="hi-m1">model1_nb_gt_07</span>
+            <span style="color:var(--dim)">Nb req. score &gt; 0.7</span>
+          </div>
+          <div class="connector-box" style="margin:0">
+            <span class="hi-m1">model1_score_max_api</span>
+            <span style="color:var(--dim)">Max score sur APIs</span>
+          </div>
+          <div class="connector-box" style="margin:0">
+            <span class="hi-m1">model1_score_max_doc</span>
+            <span style="color:var(--dim)">Max score sur HTML</span>
+          </div>
+          <div class="connector-box" style="margin:0">
+            <span class="hi-m1">model1_score_max_js</span>
+            <span style="color:var(--dim)">Max score sur scripts</span>
+          </div>
+          <div class="connector-box" style="margin:0">
+            <span class="hi-m1">model1_score_max_post</span>
+            <span style="color:var(--dim)">Max score sur POST</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow-down"><span class="arrow-sym">↓</span></div>
+
+    <!-- MODÈLE 2 -->
+    <div class="flow-row flow-row-1">
+      <div class="box m2">
+        <div class="box-tag">Modèle 2 — Scenario Classifier</div>
+        <h3>🎯 XGBoost / LightGBM — Décision finale</h3>
+        <p>S'entraîne sur T3 enrichi (features scénario + scores agrégés Modèle 1). Classification binaire supervisée : <strong style="color:var(--m2)">INCIDENT</strong> ou <strong style="color:var(--m1)">NOMINAL</strong>. Nécessite des scénarios labellisés.</p>
+        <div class="g2" style="margin-top:12px;gap:10px">
+          <div style="background:var(--bg3);border:1px solid var(--line2);border-radius:6px;padding:12px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--m2);font-weight:700;letter-spacing:1px;margin-bottom:4px">FEATURES ENTRÉE</div>
+            <div style="font-size:10px;color:var(--dim);line-height:1.6">
+              ① Features scénario T3 (~151)<br>
+              ② Scores Modèle 1 agrégés (~10)<br>
+              ③ Features de détection v5 (33)<br>
+              <strong style="color:var(--text)">Total : ~160 features</strong>
+            </div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--line2);border-radius:6px;padding:12px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--m2);font-weight:700;letter-spacing:1px;margin-bottom:4px">OUTPUT</div>
+            <div style="font-size:10px;color:var(--dim);line-height:1.6">
+              is_incident ∈ {0, 1}<br>
+              incident_proba ∈ [0.0, 1.0]<br>
+              + SHAP feature importance<br>
+              + explication requêtes coupables
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /flow -->
+</div>
+
+<!-- ═══════════════════════ 3 TABLEAUX ═══════════════════════ -->
+<div class="sec" id="tableaux">
+  <div class="sec-label">Structure des données</div>
+  <h2>Les Trois Tableaux</h2>
+
+  <div class="g3">
+    <div class="card" style="border-top:2px solid var(--t1)">
+      <div class="card-label" style="color:var(--t1)">T1 — Requêtes</div>
+      <div class="card-value" style="color:var(--t1)">N × 131</div>
+      <div class="card-sub">N = total des requêtes HTTP<br>1 ligne = 1 requête<br>→ alimenté Modèle 1</div>
+    </div>
+    <div class="card" style="border-top:2px solid var(--t2)">
+      <div class="card-label" style="color:var(--t2)">T2 — Steps</div>
+      <div class="card-value" style="color:var(--t2)">K × 78</div>
+      <div class="card-sub">K = nombre d'étapes du parcours<br>1 ligne = 1 step HAR<br>→ analyse dégradation progressive</div>
+    </div>
+    <div class="card" style="border-top:2px solid var(--t3)">
+      <div class="card-label" style="color:var(--t3)">T3 — Scénarios</div>
+      <div class="card-value" style="color:var(--t3)">1 × 161+</div>
+      <div class="card-sub">1 ligne par fichier HAR<br>151 features extraites + 10 scores M1<br>→ alimenté Modèle 2</div>
+    </div>
+  </div>
+
+  <div class="callout orange" style="margin-top:20px">
+    <strong>Pourquoi trois tableaux ?</strong> T1 permet le scoring fin par requête (contexte individuel). T2 capture la dégradation progressive entre étapes (pattern temporel). T3 fournit la vue globale pour la décision finale. Chaque tableau a un rôle distinct dans la chaîne de décision.
+  </div>
+</div>
+
+<!-- ═══════════════════════ CLÉ BASELINE ═══════════════════════ -->
+<div class="sec" id="baseline-key">
+  <div class="sec-label">Problème central</div>
+  <h2>La Clé Baseline — Comparer le Comparable</h2>
+
+  <div class="callout red">
+    <strong>Le problème :</strong> Un CSS répond normalement en 20 ms, une API de paiement en 800 ms. Sans segmentation, le modèle traite tout ensemble et rate les vraies anomalies. La solution : comparer chaque requête <strong>uniquement à ses semblables historiques</strong>.
+  </div>
+
+  <h3 style="margin-top:24px;margin-bottom:12px;font-size:16px">Champs utilisés pour construire la clé</h3>
+
+  <div class="tbl-wrap">
+    <table class="ftable key-t">
+      <thead><tr><th>Champ</th><th>Rôle dans la clé</th><th>Extraction HAR 1.2</th><th>Exemple</th></tr></thead>
+      <tbody>
+        <tr><td>request_method</td><td>Sémantique de l'opération</td><td>entry['request']['method']</td><td>GET, POST, PUT</td></tr>
+        <tr><td>request_domain</td><td>Serveur cible</td><td>urlparse(url).netloc</td><td>api.generali.fr</td></tr>
+        <tr><td>request_path_normalized</td><td>Endpoint sans IDs variables</td><td>normalize_path(path)</td><td>/api/v2/contract/{id} → /api/v2/contract/&lt;ID&gt;</td></tr>
+        <tr><td>functional_params_keys</td><td>Paramètres métier (filtrés)</td><td>sorted([p['name'] for p in queryString])</td><td>action, tabId → ['action']</td></tr>
+        <tr><td>request_resource_type</td><td>Nature de la ressource</td><td>inféré depuis content-type</td><td>fetch, document, script</td></tr>
+        <tr><td>request_scheme</td><td>Protocole (séparité http/https)</td><td>urlparse(url).scheme</td><td>https</td></tr>
+        <tr><td>postdata_params_keys</td><td>Structure du body POST</td><td>sorted([p['name'] for p in postData.params])</td><td>['username', 'password']</td></tr>
+        <tr><td>request_pageref</td><td>Step du scénario (contexte navigateur)</td><td>entry.get('pageref','')</td><td>step_2, page_3</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:28px;margin-bottom:12px;font-size:16px">Algorithme de construction de la clé</h3>
+
+  <pre><span class="c-kw">import</span> re, hashlib
+<span class="c-kw">from</span> urllib.parse <span class="c-kw">import</span> urlparse
+
+<span class="c-cm"># Paramètres à filtrer : techniques, anti-cache, session</span>
+EXCLUDE_PARAMS = {
+    <span class="c-st">'tabId'</span>, <span class="c-st">'_t'</span>, <span class="c-st">'timestamp'</span>, <span class="c-st">'_cache'</span>, <span class="c-st">'rand'</span>, <span class="c-st">'nonce'</span>,
+    <span class="c-st">'sessionId'</span>, <span class="c-st">'token'</span>, <span class="c-st">'JSESSIONID'</span>, <span class="c-st">'v'</span>, <span class="c-st">'version'</span>, <span class="c-st">'_'</span>,
+    <span class="c-st">'cb'</span>, <span class="c-st">'callback'</span>, <span class="c-st">'requestId'</span>, <span class="c-st">'correlationId'</span>
+}
+
+<span class="c-cm"># Patterns d'IDs variables dans les paths</span>
+ID_PATTERNS = [
+    (re.compile(<span class="c-st">r'/\d{5,}'</span>),      <span class="c-st">'/&lt;ID&gt;'</span>),
+    (re.compile(<span class="c-st">r'/[a-f0-9]{8,}'</span>), <span class="c-st">'/&lt;HASH&gt;'</span>),
+    (re.compile(<span class="c-st">r'/[A-Z]{2}\d{6,}'</span>),<span class="c-st">'/&lt;REF&gt;'</span>),
+    (re.compile(<span class="c-st">r'/v\d+/'</span>),         <span class="c-st">'/vN/'</span>),
+]
+
+<span class="c-kw">def</span> <span class="c-fn">normalize_path</span>(path: str) -> str:
+    <span class="c-kw">for</span> pattern, replacement <span class="c-kw">in</span> ID_PATTERNS:
+        path = pattern.sub(replacement, path)
+    <span class="c-kw">return</span> path.lower().rstrip(<span class="c-st">'/'</span>)
+
+<span class="c-kw">def</span> <span class="c-fn">filter_functional_params</span>(qs_list: list) -> list:
+    <span class="c-kw">return</span> sorted(
+        p[<span class="c-st">'name'</span>] <span class="c-kw">for</span> p <span class="c-kw">in</span> qs_list
+        <span class="c-kw">if</span> p[<span class="c-st">'name'</span>].lower() <span class="c-kw">not in</span> EXCLUDE_PARAMS
+    )
+
+<span class="c-kw">def</span> <span class="c-fn">build_baseline_key</span>(entry: dict) -> str:
+    req     = entry.get(<span class="c-st">'request'</span>, {})
+    url     = req.get(<span class="c-st">'url'</span>, <span class="c-st">''</span>)
+    parsed  = urlparse(url)
+    method  = req.get(<span class="c-st">'method'</span>, <span class="c-st">''</span>).upper()
+    domain  = parsed.netloc.lower()
+    path    = normalize_path(parsed.path)
+    qs_keys = filter_functional_params(req.get(<span class="c-st">'queryString'</span>, []))
+    pd_keys = filter_functional_params(
+        (req.get(<span class="c-st">'postData'</span>, {}) <span class="c-kw">or</span> {}).get(<span class="c-st">'params'</span>, []))
+    rtype   = infer_resource_type(entry)  <span class="c-cm"># depuis har_extractor</span>
+
+    raw = <span class="c-st">f"</span>{method}<span class="c-st">|</span>{domain}<span class="c-st">|</span>{path}<span class="c-st">|</span>{','.join(qs_keys)}<span class="c-st">|</span>{','.join(pd_keys)}<span class="c-st">|</span>{rtype}<span class="c-st">"</span>
+    <span class="c-kw">return</span> hashlib.md5(raw.encode()).hexdigest()[:<span class="c-nb">12</span>]  <span class="c-cm"># 12 chars lisibles</span>
+
+<span class="c-cm"># Exemples de clés générées :</span>
+<span class="c-cm"># GET|api.gen.fr|/api/v2/contract/&lt;ID&gt;||action|fetch  → "3f9a2c1e8d7b"</span>
+<span class="c-cm"># GET|cdn.gen.fr|/static/main.min.css|||stylesheet     → "a14b56f2c8e3"</span>
+<span class="c-cm"># POST|auth.gen.fr|/auth/login|username,password||doc  → "92d3f1a47e5c"</span></pre>
+
+  <div class="callout blue" style="margin-top:16px">
+    <strong>Exemple concret :</strong><br>
+    • <code style="color:var(--t1)">/api/v2/contracts/12345678</code> et <code style="color:var(--t1)">/api/v2/contracts/98765432</code> → même clé <code style="color:var(--key)">/api/v2/contracts/&lt;ID&gt;</code><br>
+    • <code style="color:var(--t1)">/user/auth/dologin?tabId=123456</code> → tabId filtré → même clé que <code style="color:var(--t1)">/user/auth/dologin?tabId=999999</code><br>
+    • <code style="color:var(--t1)">GET /main.css</code> ≠ <code style="color:var(--t1)">GET /api/data</code> → clés différentes → baselines séparées
+  </div>
+</div>
+
+<!-- ═══════════════════════ BASELINE SYSTÈME ═══════════════════════ -->
+<div class="sec" id="baseline">
+  <div class="sec-label">Système de référence</div>
+  <h2>Double Baseline par Clé</h2>
+
+  <div class="g2">
+    <div class="box base" style="border-color:rgba(59,130,246,.3)">
+      <div class="box-tag">Baseline Figée</div>
+      <h3>📌 50 derniers runs normaux</h3>
+      <p style="margin-bottom:12px">Référence stable constituée sur 50 exécutions sans incident. Absorbe la dérive naturelle sur ~3 mois. Réinitialisée manuellement après une MEP majeure.</p>
+      <div style="background:var(--bg3);border-radius:6px;padding:12px;font-family:var(--mono);font-size:10px;color:var(--dim);line-height:1.8">
+        <span class="hi-base">baseline_fixed[key] = {</span><br>
+        <span style="padding-left:16px"><span class="hi-m1">mean_ttfb</span><span>: np.mean(history[-50:]['timing_wait_ms']),</span></span><br>
+        <span style="padding-left:16px"><span class="hi-m1">std_ttfb</span><span>: np.std(history[-50:]['timing_wait_ms']),</span></span><br>
+        <span style="padding-left:16px"><span class="hi-m1">p95_total</span><span>: np.percentile(history[-50:]['timing_total_ms'], 95),</span></span><br>
+        <span style="padding-left:16px"><span class="hi-m1">mean_body</span><span>: np.mean(history[-50:]['response_body_size']),</span></span><br>
+        <span style="padding-left:16px"><span class="hi-m1">n_samples</span><span>: len(history[-50:]),</span></span><br>
+        <span style="padding-left:16px"><span class="hi-m1">if_model</span><span>: IsolationForest().fit(history[-50:])</span></span><br>
+        <span class="hi-base">}</span>
+      </div>
+    </div>
+    <div class="box" style="border-color:rgba(167,139,250,.3)">
+      <div class="box-tag" style="color:var(--t2)">Baseline Glissante</div>
+      <h3>🔄 10 derniers runs normaux</h3>
+      <p style="margin-bottom:12px">Fenêtre courte qui suit l'évolution récente de l'application. Détecte les dérives progressives imperceptibles par la baseline figée.</p>
+      <div style="background:var(--bg3);border-radius:6px;padding:12px;font-family:var(--mono);font-size:10px;color:var(--dim);line-height:1.8">
+        <span style="color:var(--t2)">baseline_sliding[key] = {</span><br>
+        <span style="padding-left:16px"><span class="hi-m1">mean_ttfb</span><span>: np.mean(history[-10:]['timing_wait_ms']),</span></span><br>
+        <span style="padding-left:16px"><span class="hi-m1">std_ttfb</span><span>: np.std(history[-10:]['timing_wait_ms']),</span></span><br>
+        <span style="padding-left:16px"><span class="hi-m1">p95_total</span><span>: np.percentile(history[-10:]['timing_total_ms'], 95),</span></span><br>
+        <span style="padding-left:16px"><span class="hi-m1">n_samples</span><span>: len(history[-10:]),</span></span><br>
+        <span style="padding-left:16px"><span class="hi-m1">if_model</span><span>: IsolationForest().fit(history[-10:])</span></span><br>
+        <span style="color:var(--t2)">}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout green" style="margin-top:16px">
+    <strong>Stratégie d'activation :</strong> On utilise les <strong>deux scores en parallèle</strong> comme features pour le Modèle 2. Si score_fixed élevé → anomalie absolue. Si score_sliding élevé mais score_fixed normal → dérive progressive récente. Les deux ensemble = signal plus riche.
+  </div>
+
+  <h3 style="margin-top:24px;margin-bottom:8px;font-size:15px">Features dérivées de la baseline (ajoutées dans T1)</h3>
+  <div class="tbl-wrap">
+    <table class="ftable">
+      <thead><tr><th>Feature</th><th>Description</th><th>Calcul</th></tr></thead>
+      <tbody>
+        <tr><td style="color:var(--m1)">baseline_key</td><td style="color:var(--dim)">Identifiant du groupe de comparaison</td><td>hash 12 chars</td></tr>
+        <tr><td style="color:var(--m1)">score_if_fixed</td><td style="color:var(--dim)">Score anomalie baseline figée (50 runs)</td><td>IF.score_samples() normalisé [0,1]</td></tr>
+        <tr><td style="color:var(--m1)">score_if_sliding</td><td style="color:var(--dim)">Score anomalie baseline glissante (10 runs)</td><td>IF.score_samples() normalisé [0,1]</td></tr>
+        <tr><td style="color:var(--m1)">ttfb_zscore_fixed</td><td style="color:var(--dim)">Z-score du TTFB vs baseline figée</td><td>(ttfb - mean_fixed) / std_fixed</td></tr>
+        <tr><td style="color:var(--m1)">ttfb_zscore_sliding</td><td style="color:var(--dim)">Z-score du TTFB vs baseline glissante</td><td>(ttfb - mean_sliding) / std_sliding</td></tr>
+        <tr><td style="color:var(--m1)">total_ms_pct_fixed</td><td style="color:var(--dim)">Percentile du temps total vs baseline figée</td><td>percentileofscore(fixed_dist, total_ms)</td></tr>
+        <tr><td style="color:var(--m1)">body_size_zscore</td><td style="color:var(--dim)">Z-score taille body vs baseline</td><td>(body - mean_body) / std_body</td></tr>
+        <tr><td style="color:var(--m1)">baseline_n_fixed</td><td style="color:var(--dim)">Nb d'échantillons dans la baseline figée</td><td>min(50, len(history))</td></tr>
+        <tr><td style="color:var(--m1)">baseline_n_sliding</td><td style="color:var(--dim)">Nb d'échantillons dans la baseline glissante</td><td>min(10, len(history))</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════ MODÈLE 1 ═══════════════════════ -->
+<div class="sec" id="modele1">
+  <div class="sec-label">Modèle 1 · Per-Request</div>
+  <h2>Isolation Forest — Scorer par Requête</h2>
+
+  <div class="callout green">
+    <strong>Principe :</strong> Un Isolation Forest distinct est entraîné pour chaque clé baseline ayant ≥ 30 échantillons. Si la clé a moins de 30 échantillons, on utilise un modèle global de fallback entraîné sur toutes les requêtes du même resource_type.
+  </div>
+
+  <h3 style="margin-top:24px;margin-bottom:12px;font-size:15px">Features d'entrée du Modèle 1 (T1 → 26 features retenues)</h3>
+  <div class="tbl-wrap">
+    <table class="ftable">
+      <thead><tr><th>Feature</th><th>Type</th><th>Rôle</th><th>Priorité</th></tr></thead>
+      <tbody>
+        <tr><td>timing_total_ms</td><td>numeric</td><td>Durée totale de la requête</td><td><span class="pill" style="background:rgba(239,68,68,.15);color:var(--m2)">CRITIQUE</span></td></tr>
+        <tr><td>timing_wait_ms_clean</td><td>numeric</td><td>TTFB — temps avant premier octet</td><td><span class="pill" style="background:rgba(239,68,68,.15);color:var(--m2)">CRITIQUE</span></td></tr>
+        <tr><td>response_body_size</td><td>numeric</td><td>Taille du body de réponse</td><td><span class="pill" style="background:rgba(239,68,68,.15);color:var(--m2)">CRITIQUE</span></td></tr>
+        <tr><td>timing_blocked_ms_clean</td><td>numeric</td><td>Temps bloqué réseau</td><td><span class="pill" style="background:rgba(245,158,11,.15);color:var(--t3)">HAUT</span></td></tr>
+        <tr><td>timing_ratio_wait</td><td>numeric</td><td>Part du TTFB dans le temps total</td><td><span class="pill" style="background:rgba(245,158,11,.15);color:var(--t3)">HAUT</span></td></tr>
+        <tr><td>timing_ratio_blocked</td><td>numeric</td><td>Part du blocked dans le temps total</td><td><span class="pill" style="background:rgba(245,158,11,.15);color:var(--t3)">HAUT</span></td></tr>
+        <tr><td>response_content_size</td><td>numeric</td><td>Taille content décompressé</td><td><span class="pill" style="background:rgba(245,158,11,.15);color:var(--t3)">HAUT</span></td></tr>
+        <tr><td>response_compression_ratio</td><td>numeric</td><td>Ratio de compression (anomalie si 0 soudain)</td><td><span class="pill" style="background:rgba(245,158,11,.15);color:var(--t3)">HAUT</span></td></tr>
+        <tr><td>timing_dns_ms_clean</td><td>numeric</td><td>DNS (pic = problème résolution)</td><td><span class="pill" style="background:rgba(59,130,246,.15);color:var(--base)">MOYEN</span></td></tr>
+        <tr><td>timing_connect_ms_clean</td><td>numeric</td><td>TCP connect (pic = congestion)</td><td><span class="pill" style="background:rgba(59,130,246,.15);color:var(--base)">MOYEN</span></td></tr>
+        <tr><td>timing_ssl_ms_clean</td><td>numeric</td><td>SSL handshake (pic = cert lent)</td><td><span class="pill" style="background:rgba(59,130,246,.15);color:var(--base)">MOYEN</span></td></tr>
+        <tr><td>timing_receive_ms_clean</td><td>numeric</td><td>Temps de réception</td><td><span class="pill" style="background:rgba(59,130,246,.15);color:var(--base)">MOYEN</span></td></tr>
+        <tr><td>timing_overhead_ms</td><td>numeric</td><td>Temps non expliqué par les phases</td><td><span class="pill" style="background:rgba(59,130,246,.15);color:var(--base)">MOYEN</span></td></tr>
+        <tr><td>response_is_error</td><td>binary</td><td>Status ≥ 400 ou 0</td><td><span class="pill" style="background:rgba(239,68,68,.15);color:var(--m2)">CRITIQUE</span></td></tr>
+        <tr><td>response_status</td><td>numeric</td><td>Code HTTP (distribution de statuts)</td><td><span class="pill" style="background:rgba(245,158,11,.15);color:var(--t3)">HAUT</span></td></tr>
+        <tr><td>response_has_body</td><td>binary</td><td>Réponse vide inattendue (200 + body=0)</td><td><span class="pill" style="background:rgba(245,158,11,.15);color:var(--t3)">HAUT</span></td></tr>
+        <tr><td>request_total_size</td><td>numeric</td><td>Volume de la requête (headers + body)</td><td><span class="pill" style="background:rgba(59,130,246,.15);color:var(--base)">MOYEN</span></td></tr>
+        <tr><td>request_querystring_count</td><td>numeric</td><td>Nb de paramètres QS</td><td><span class="pill" style="background:rgba(59,130,246,.15);color:var(--base)">MOYEN</span></td></tr>
+        <tr><td>request_cookie_count</td><td>numeric</td><td>Nb de cookies envoyés</td><td><span class="pill" style="background:rgba(59,130,246,.15);color:var(--base)">MOYEN</span></td></tr>
+        <tr><td>network_connection_reused</td><td>binary</td><td>Connexion TCP réutilisée</td><td><span class="pill" style="background:rgba(59,130,246,.15);color:var(--base)">MOYEN</span></td></tr>
+        <tr><td>response_has_etag</td><td>binary</td><td>ETag présent (absence anormale)</td><td><span class="pill" style="background:rgba(100,116,139,.15);color:var(--dim)">BAS</span></td></tr>
+        <tr><td>response_encoding_is_gzip</td><td>binary</td><td>Compression gzip active</td><td><span class="pill" style="background:rgba(100,116,139,.15);color:var(--dim)">BAS</span></td></tr>
+        <tr><td>response_encoding_is_br</td><td>binary</td><td>Compression brotli active</td><td><span class="pill" style="background:rgba(100,116,139,.15);color:var(--dim)">BAS</span></td></tr>
+        <tr><td>ttfb_vs_step_mean_ratio</td><td>numeric</td><td>TTFB vs moyenne du step (v5)</td><td><span class="pill" style="background:rgba(245,158,11,.15);color:var(--t3)">HAUT</span></td></tr>
+        <tr><td>request_position_in_step_ratio</td><td>numeric</td><td>Position relative dans le step (v5)</td><td><span class="pill" style="background:rgba(59,130,246,.15);color:var(--base)">MOYEN</span></td></tr>
+        <tr><td>request_is_third_party</td><td>binary</td><td>Requête tierce partie</td><td><span class="pill" style="background:rgba(59,130,246,.15);color:var(--base)">MOYEN</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 style="margin-top:24px;margin-bottom:8px;font-size:15px">Features exclues du Modèle 1</h3>
+  <div class="callout" style="margin:0;font-size:11px">
+    <strong>Exclusions :</strong> request_method, request_url, request_domain, request_path (→ inclus dans la clé, pas en feature ML) · request_started_at (→ temporel, non pertinent pour IF) · response_mime_type, request_resource_type (→ inclus dans la clé) · request_position (→ trop variable, corrélé à position_in_step_ratio) · request_id, scenario_id (→ identifiants purs) · response_server, network_server_ip (→ strings, non numériques)
+  </div>
+</div>
+
+<!-- ═══════════════════════ MODÈLE 2 ═══════════════════════ -->
+<div class="sec" id="modele2">
+  <div class="sec-label">Modèle 2 · Décision finale</div>
+  <h2>XGBoost / LightGBM — Classifier de Scénario</h2>
+
+  <div class="g2">
+    <div>
+      <h3 style="margin-bottom:10px;font-size:14px">Features spécifiques Modèle 2 — Exclusions vs LightGBM</h3>
+      <div class="tbl-wrap">
+        <table class="ftable t3">
+          <thead><tr><th>Modèle</th><th>Features exclues</th><th>Raison</th></tr></thead>
+          <tbody>
+            <tr><td style="color:var(--m2)">IF (M1)</td><td style="color:var(--dim)">step_duplicate_url_count<br>inter_request_gap_max_ms<br>scenario_dom_vs_load_ratio_mean<br>request_position_in_step_ratio</td><td>Redondances ou distribution uniforme</td></tr>
+            <tr><td style="color:var(--t3)">XGBoost</td><td style="color:var(--dim)">req_time_std_by_step (si &lt;500 scénarios)</td><td>Risque overfitting petit dataset</td></tr>
+            <tr><td style="color:var(--m1)">LightGBM</td><td style="color:var(--dim)">Aucune exclusion</td><td>Gère nativement la redondance</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top:20px;margin-bottom:10px;font-size:14px">Scores Modèle 1 ajoutés dans T3</h3>
+      <div class="tbl-wrap">
+        <table class="ftable t3">
+          <thead><tr><th>Feature ajoutée</th><th>Description</th></tr></thead>
+          <tbody>
+            <tr><td>model1_score_mean</td><td style="color:var(--dim)">Moyenne des scores IF sur toutes les requêtes</td></tr>
+            <tr><td>model1_score_max</td><td style="color:var(--dim)">Score IF maximum (requête la plus anormale)</td></tr>
+            <tr><td>model1_score_p95</td><td style="color:var(--dim)">Percentile 95 des scores IF</td></tr>
+            <tr><td>model1_score_p99</td><td style="color:var(--dim)">Percentile 99 des scores IF</td></tr>
+            <tr><td>model1_nb_req_score_gt_07</td><td style="color:var(--dim)">Nb de requêtes avec score &gt; 0.7</td></tr>
+            <tr><td>model1_nb_req_score_gt_09</td><td style="color:var(--dim)">Nb de requêtes avec score &gt; 0.9</td></tr>
+            <tr><td>model1_score_max_api</td><td style="color:var(--dim)">Max score sur endpoints API (fetch/xhr)</td></tr>
+            <tr><td>model1_score_max_document</td><td style="color:var(--dim)">Max score sur ressources document HTML</td></tr>
+            <tr><td>model1_score_max_script</td><td style="color:var(--dim)">Max score sur fichiers JavaScript</td></tr>
+            <tr><td>model1_score_max_post</td><td style="color:var(--dim)">Max score sur requêtes POST</td></tr>
+            <tr><td>model1_score_fixed_mean</td><td style="color:var(--dim)">Moyenne scores baseline figée (50 runs)</td></tr>
+            <tr><td>model1_score_sliding_mean</td><td style="color:var(--dim)">Moyenne scores baseline glissante (10 runs)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div>
+      <h3 style="margin-bottom:10px;font-size:14px">Features T3 prioritaires pour la décision finale</h3>
+      <div class="tbl-wrap" style="max-height:460px;overflow-y:auto">
+        <table class="ftable t3">
+          <thead><tr><th>Feature</th><th>Signal d'incident</th></tr></thead>
+          <tbody>
+            <tr><td>model1_score_max</td><td style="color:var(--dim)">Requête ultra-anormale dans le scénario</td></tr>
+            <tr><td>model1_score_p95</td><td style="color:var(--dim)">5% des requêtes anormales</td></tr>
+            <tr><td>scenario_failure_rate_pct</td><td style="color:var(--dim)">Taux d'erreur global</td></tr>
+            <tr><td>req_time_cv</td><td style="color:var(--dim)">Instabilité des temps de réponse</td></tr>
+            <tr><td>failed_then_retried</td><td style="color:var(--dim)">Retry loop détecté</td></tr>
+            <tr><td>unexpected_html_on_api</td><td style="color:var(--dim)">Pages d'erreur déguisées</td></tr>
+            <tr><td>empty_2xx_response_count</td><td style="color:var(--dim)">Incidents silencieux</td></tr>
+            <tr><td>ttfb_std_dev</td><td style="color:var(--dim)">Variabilité serveur</td></tr>
+            <tr><td>blocked_std_dev</td><td style="color:var(--dim)">Variabilité réseau</td></tr>
+            <tr><td>step_ttfb_degradation_pct</td><td style="color:var(--dim)">Dégradation progressive</td></tr>
+            <tr><td>step_failure_rate_increase</td><td style="color:var(--dim)">Erreurs croissantes par step</td></tr>
+            <tr><td>duplicate_url_count</td><td style="color:var(--dim)">URLs appelées plusieurs fois</td></tr>
+            <tr><td>same_url_different_status</td><td style="color:var(--dim)">Instabilité serveur</td></tr>
+            <tr><td>max_parallel_requests</td><td style="color:var(--dim)">Pic de charge</td></tr>
+            <tr><td>inter_request_gap_max_ms</td><td style="color:var(--dim)">Timeout silencieux</td></tr>
+            <tr><td>load_time_degradation_pct</td><td style="color:var(--dim)">Dégradation globale</td></tr>
+            <tr><td>scenario_timeout_count</td><td style="color:var(--dim)">Timeouts (status 0)</td></tr>
+            <tr><td>scenario_dom_vs_load_ratio_mean</td><td style="color:var(--dim)">Ressources bloquantes</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════ FEATURES COMPLÈTES ═══════════════════════ -->
+<div class="sec" id="features">
+  <div class="sec-label">Référence complète</div>
+  <h2>Toutes les Features par Tableau</h2>
+
+  <!-- T1 -->
+  <h3 style="color:var(--t1);font-size:15px;margin:24px 0 8px;display:flex;align-items:center;gap:10px">
+    <span class="step-num step-t1">T1</span> Tableau Requêtes — Features complètes
+  </h3>
+
+  <div class="tbl-wrap">
+    <div class="tbl-scroll">
+    <table class="ftable">
+      <thead><tr><th>Feature</th><th>Groupe</th><th>Description</th><th>Modèle 1</th></tr></thead>
+      <tbody>
+        <tr><td>scenario_id</td><td style="color:var(--muted)">ID</td><td style="color:var(--dim)">Identifiant du scénario HAR</td><td>✗</td></tr>
+        <tr><td>request_id</td><td style="color:var(--muted)">ID</td><td style="color:var(--dim)">ID synthétique de la requête</td><td>✗</td></tr>
+        <tr><td>request_position</td><td style="color:var(--muted)">ID</td><td style="color:var(--dim)">Position dans le HAR (0-based)</td><td>✗</td></tr>
+        <tr><td>request_pageref</td><td style="color:var(--muted)">ID</td><td style="color:var(--dim)">Référence de la page/step</td><td>✗</td></tr>
+        <tr><td>request_step_name</td><td style="color:var(--muted)">ID</td><td style="color:var(--dim)">Titre de l'étape</td><td>✗</td></tr>
+        <tr><td>request_started_at</td><td style="color:var(--muted)">ID</td><td style="color:var(--dim)">Timestamp de début</td><td>✗</td></tr>
+        <tr><td>request_time_ms</td><td style="color:var(--muted)">Timing</td><td style="color:var(--dim)">Durée totale brute (champ HAR)</td><td>✓</td></tr>
+        <!-- baseline key fields -->
+        <tr><td>baseline_key</td><td style="color:var(--key)">★ Clé</td><td style="color:var(--dim)">Hash MD5 identifiant le type fonctionnel</td><td>✗ (groupe)</td></tr>
+        <tr><td>request_method</td><td style="color:var(--key)">★ Clé</td><td style="color:var(--dim)">GET, POST, PUT, DELETE…</td><td>✗ (clé)</td></tr>
+        <tr><td>request_scheme</td><td style="color:var(--key)">★ Clé</td><td style="color:var(--dim)">http / https</td><td>✗ (clé)</td></tr>
+        <tr><td>request_domain</td><td style="color:var(--key)">★ Clé</td><td style="color:var(--dim)">Domaine cible</td><td>✗ (clé)</td></tr>
+        <tr><td>request_path</td><td style="color:var(--key)">★ Clé</td><td style="color:var(--dim)">Path URL brut</td><td>✗ (clé)</td></tr>
+        <tr><td>request_path_normalized</td><td style="color:var(--key)">★ Clé</td><td style="color:var(--dim)">Path avec IDs remplacés par &lt;ID&gt;</td><td>✗ (clé)</td></tr>
+        <tr><td>request_functional_params_keys</td><td style="color:var(--key)">★ Clé</td><td style="color:var(--dim)">Paramètres QS fonctionnels (filtrés)</td><td>✗ (clé)</td></tr>
+        <tr><td>postdata_params_keys</td><td style="color:var(--key)">★ Clé</td><td style="color:var(--dim)">Noms paramètres POST (triés)</td><td>✗ (clé)</td></tr>
+        <tr><td>request_url</td><td style="color:var(--muted)">URL</td><td style="color:var(--dim)">URL complète</td><td>✗</td></tr>
+        <tr><td>request_http_version</td><td style="color:var(--muted)">URL</td><td style="color:var(--dim)">HTTP/1.1, HTTP/2</td><td>✗</td></tr>
+        <tr><td>request_is_https</td><td style="color:var(--muted)">URL</td><td style="color:var(--dim)">Flag HTTPS</td><td>✗</td></tr>
+        <tr><td>request_is_third_party</td><td style="color:var(--muted)">URL</td><td style="color:var(--dim)">Domaine tiers</td><td>✓</td></tr>
+        <tr><td>request_url_path_depth</td><td style="color:var(--muted)">URL</td><td style="color:var(--dim)">Profondeur du path</td><td>✗</td></tr>
+        <tr><td>request_url_extension</td><td style="color:var(--muted)">URL</td><td style="color:var(--dim)">Extension du fichier</td><td>✗</td></tr>
+        <tr><td>request_url_is_api</td><td style="color:var(--muted)">URL</td><td style="color:var(--dim)">Heuristique endpoint API</td><td>✗</td></tr>
+        <tr><td>request_querystring_count</td><td style="color:var(--muted)">Params</td><td style="color:var(--dim)">Nb paramètres query string</td><td>✓</td></tr>
+        <tr><td>request_headers_size</td><td style="color:var(--muted)">Taille</td><td style="color:var(--dim)">Taille headers requête</td><td>✗</td></tr>
+        <tr><td>request_body_size</td><td style="color:var(--muted)">Taille</td><td style="color:var(--dim)">Taille body requête</td><td>✗</td></tr>
+        <tr><td>request_total_size</td><td style="color:var(--muted)">Taille</td><td style="color:var(--dim)">Headers + body</td><td>✓</td></tr>
+        <tr><td>request_header_count</td><td style="color:var(--muted)">Taille</td><td style="color:var(--dim)">Nb headers envoyés</td><td>✗</td></tr>
+        <tr><td>request_cookie_count</td><td style="color:var(--muted)">Cookies</td><td style="color:var(--dim)">Nb cookies</td><td>✓</td></tr>
+        <tr><td>request_cookie_has_secure</td><td style="color:var(--muted)">Cookies</td><td style="color:var(--dim)">Flag Secure présent</td><td>✗</td></tr>
+        <tr><td>request_cookie_has_httponly</td><td style="color:var(--muted)">Cookies</td><td style="color:var(--dim)">Flag HttpOnly présent</td><td>✗</td></tr>
+        <tr><td>request_cookie_total_size</td><td style="color:var(--muted)">Cookies</td><td style="color:var(--dim)">Taille totale cookies</td><td>✗</td></tr>
+        <tr><td>request_has_postdata</td><td style="color:var(--muted)">PostData</td><td style="color:var(--dim)">Body POST présent</td><td>✗</td></tr>
+        <tr><td>request_postdata_size</td><td style="color:var(--muted)">PostData</td><td style="color:var(--dim)">Taille body POST</td><td>✗</td></tr>
+        <tr><td>request_postdata_param_count</td><td style="color:var(--muted)">PostData</td><td style="color:var(--dim)">Nb paramètres POST</td><td>✗</td></tr>
+        <tr><td>request_resource_type</td><td style="color:var(--key)">★ Clé</td><td style="color:var(--dim)">document, script, fetch, image…</td><td>✗ (clé)</td></tr>
+        <tr><td>request_has_referer</td><td style="color:var(--muted)">Headers</td><td style="color:var(--dim)">Referer présent</td><td>✗</td></tr>
+        <tr><td>request_has_origin</td><td style="color:var(--muted)">Headers</td><td style="color:var(--dim)">Origin présent</td><td>✗</td></tr>
+        <tr><td>request_has_auth</td><td style="color:var(--muted)">Headers</td><td style="color:var(--dim)">Authorization présent</td><td>✗</td></tr>
+        <tr><td>request_has_api_key</td><td style="color:var(--muted)">Headers</td><td style="color:var(--dim)">x-api-key présent</td><td>✗</td></tr>
+        <tr><td>request_is_cors_preflight</td><td style="color:var(--muted)">Headers</td><td style="color:var(--dim)">OPTIONS CORS</td><td>✗</td></tr>
+        <tr><td>response_status</td><td style="color:var(--muted)">Réponse</td><td style="color:var(--dim)">Code HTTP</td><td>✓</td></tr>
+        <tr><td>response_is_2xx / 3xx / 4xx / 5xx</td><td style="color:var(--muted)">Réponse</td><td style="color:var(--dim)">Flags par classe HTTP</td><td>✗</td></tr>
+        <tr><td>response_is_timeout</td><td style="color:var(--muted)">Réponse</td><td style="color:var(--dim)">Status = 0</td><td>✗</td></tr>
+        <tr><td>response_is_error</td><td style="color:var(--muted)">Réponse</td><td style="color:var(--dim)">Status ≥ 400 ou = 0</td><td>✓</td></tr>
+        <tr><td>response_body_size</td><td style="color:var(--muted)">Taille</td><td style="color:var(--dim)">Taille body réponse</td><td>✓</td></tr>
+        <tr><td>response_content_size</td><td style="color:var(--muted)">Taille</td><td style="color:var(--dim)">Taille décompressée</td><td>✓</td></tr>
+        <tr><td>response_transfer_size</td><td style="color:var(--muted)">Taille</td><td style="color:var(--dim)">Taille réseau transférée</td><td>✗</td></tr>
+        <tr><td>response_has_body</td><td style="color:var(--muted)">Taille</td><td style="color:var(--dim)">Body non vide</td><td>✓</td></tr>
+        <tr><td>response_is_compressed</td><td style="color:var(--muted)">Compress.</td><td style="color:var(--dim)">Réponse compressée</td><td>✗</td></tr>
+        <tr><td>response_compression_ratio</td><td style="color:var(--muted)">Compress.</td><td style="color:var(--dim)">Ratio de compression</td><td>✓</td></tr>
+        <tr><td>response_content_compression_bytes</td><td style="color:var(--muted)">Compress.</td><td style="color:var(--dim)">Octets économisés</td><td>✗</td></tr>
+        <tr><td>response_encoding_is_gzip/br/zstd/deflate</td><td style="color:var(--muted)">Compress.</td><td style="color:var(--dim)">Type de compression</td><td>✓</td></tr>
+        <tr><td>response_mime_type</td><td style="color:var(--key)">★ Clé</td><td style="color:var(--dim)">MIME type exact</td><td>✗ (clé)</td></tr>
+        <tr><td>response_mime_category</td><td style="color:var(--key)">★ Clé</td><td style="color:var(--dim)">Catégorie MIME</td><td>✗ (clé)</td></tr>
+        <tr><td>response_has_content_text</td><td style="color:var(--muted)">Contenu</td><td style="color:var(--dim)">Texte body disponible</td><td>✗</td></tr>
+        <tr><td>response_content_text_size</td><td style="color:var(--muted)">Contenu</td><td style="color:var(--dim)">Taille texte body</td><td>✗</td></tr>
+        <tr><td>response_age_seconds</td><td style="color:var(--muted)">Cache</td><td style="color:var(--dim)">Âge cache (header Age)</td><td>✗</td></tr>
+        <tr><td>response_max_age_seconds</td><td style="color:var(--muted)">Cache</td><td style="color:var(--dim)">max-age Cache-Control</td><td>✗</td></tr>
+        <tr><td>response_has_last_modified</td><td style="color:var(--muted)">Cache</td><td style="color:var(--dim)">Last-Modified présent</td><td>✗</td></tr>
+        <tr><td>response_has_etag</td><td style="color:var(--muted)">Cache</td><td style="color:var(--dim)">ETag présent</td><td>✓</td></tr>
+        <tr><td>response_cache_is_private/public/no_store/no_cache/immutable</td><td style="color:var(--muted)">Cache</td><td style="color:var(--dim)">Directives cache</td><td>✗</td></tr>
+        <tr><td>response_is_cache_hit_304</td><td style="color:var(--muted)">Cache</td><td style="color:var(--dim)">Cache hit 304</td><td>✗</td></tr>
+        <tr><td>response_has_hsts</td><td style="color:var(--muted)">Sécurité</td><td style="color:var(--dim)">HSTS activé</td><td>✗</td></tr>
+        <tr><td>response_has_cors</td><td style="color:var(--muted)">Sécurité</td><td style="color:var(--dim)">CORS activé</td><td>✗</td></tr>
+        <tr><td>response_has_csp</td><td style="color:var(--muted)">Sécurité</td><td style="color:var(--dim)">CSP activé</td><td>✗</td></tr>
+        <tr><td>response_has_x_frame</td><td style="color:var(--muted)">Sécurité</td><td style="color:var(--dim)">X-Frame-Options</td><td>✗</td></tr>
+        <tr><td>response_has_nosniff</td><td style="color:var(--muted)">Sécurité</td><td style="color:var(--dim)">X-Content-Type-Options</td><td>✗</td></tr>
+        <tr><td>timing_blocked_ms[_clean]</td><td style="color:var(--muted)">Timing</td><td style="color:var(--dim)">Temps bloqué</td><td>✓</td></tr>
+        <tr><td>timing_dns_ms[_clean]</td><td style="color:var(--muted)">Timing</td><td style="color:var(--dim)">Résolution DNS</td><td>✓</td></tr>
+        <tr><td>timing_connect_ms[_clean]</td><td style="color:var(--muted)">Timing</td><td style="color:var(--dim)">TCP connect</td><td>✓</td></tr>
+        <tr><td>timing_ssl_ms[_clean]</td><td style="color:var(--muted)">Timing</td><td style="color:var(--dim)">SSL handshake</td><td>✓</td></tr>
+        <tr><td>timing_send_ms[_clean]</td><td style="color:var(--muted)">Timing</td><td style="color:var(--dim)">Envoi requête</td><td>✗</td></tr>
+        <tr><td>timing_wait_ms[_clean]</td><td style="color:var(--muted)">Timing</td><td style="color:var(--dim)">TTFB (wait)</td><td>✓</td></tr>
+        <tr><td>timing_receive_ms[_clean]</td><td style="color:var(--muted)">Timing</td><td style="color:var(--dim)">Réception</td><td>✓</td></tr>
+        <tr><td>timing_total_ms</td><td style="color:var(--muted)">Timing</td><td style="color:var(--dim)">Total (= entry.time)</td><td>✓</td></tr>
+        <tr><td>timing_overhead_ms</td><td style="color:var(--muted)">Timing</td><td style="color:var(--dim)">Temps non expliqué</td><td>✓</td></tr>
+        <tr><td>timing_has_dns / has_ssl / has_connect</td><td style="color:var(--muted)">Timing</td><td style="color:var(--dim)">Flags phases actives</td><td>✗</td></tr>
+        <tr><td>timing_is_slow / is_very_slow</td><td style="color:var(--muted)">Timing</td><td style="color:var(--dim)">Seuils &gt;5s / &gt;10s</td><td>✗</td></tr>
+        <tr><td>timing_ratio_blocked/dns/connect/ssl/send/wait/receive</td><td style="color:var(--muted)">Timing</td><td style="color:var(--dim)">Part de chaque phase</td><td>✓ (wait, blocked)</td></tr>
+        <tr><td>network_connection_id</td><td style="color:var(--muted)">Réseau</td><td style="color:var(--dim)">ID connexion TCP</td><td>✗</td></tr>
+        <tr><td>network_connection_reused</td><td style="color:var(--muted)">Réseau</td><td style="color:var(--dim)">Connexion réutilisée</td><td>✓</td></tr>
+        <tr><td>network_dns_cached</td><td style="color:var(--muted)">Réseau</td><td style="color:var(--dim)">DNS en cache (&lt;1ms)</td><td>✗</td></tr>
+        <tr><td>cache_has_before_request</td><td style="color:var(--muted)">Cache</td><td style="color:var(--dim)">Cache avant requête</td><td>✗</td></tr>
+        <tr><td>cache_has_after_request</td><td style="color:var(--muted)">Cache</td><td style="color:var(--dim)">Cache après requête</td><td>✗</td></tr>
+        <tr><td>ttfb_vs_step_mean_ratio</td><td style="color:var(--t3)">★ v5</td><td style="color:var(--dim)">TTFB / moyenne TTFB du step</td><td>✓</td></tr>
+        <tr><td>request_position_in_step_ratio</td><td style="color:var(--t3)">★ v5</td><td style="color:var(--dim)">Position relative dans le step (0→1)</td><td>✓</td></tr>
+        <!-- Baseline derived -->
+        <tr><td>score_if_fixed</td><td style="color:var(--m1)">★ Baseline</td><td style="color:var(--dim)">Score IF baseline figée (50 runs)</td><td>OUTPUT M1</td></tr>
+        <tr><td>score_if_sliding</td><td style="color:var(--m1)">★ Baseline</td><td style="color:var(--dim)">Score IF baseline glissante (10 runs)</td><td>OUTPUT M1</td></tr>
+        <tr><td>ttfb_zscore_fixed</td><td style="color:var(--m1)">★ Baseline</td><td style="color:var(--dim)">Z-score TTFB vs baseline figée</td><td>OUTPUT M1</td></tr>
+        <tr><td>ttfb_zscore_sliding</td><td style="color:var(--m1)">★ Baseline</td><td style="color:var(--dim)">Z-score TTFB vs baseline glissante</td><td>OUTPUT M1</td></tr>
+        <tr><td>total_ms_pct_fixed</td><td style="color:var(--m1)">★ Baseline</td><td style="color:var(--dim)">Percentile total_ms dans baseline figée</td><td>OUTPUT M1</td></tr>
+        <tr><td>body_size_zscore</td><td style="color:var(--m1)">★ Baseline</td><td style="color:var(--dim)">Z-score taille body vs baseline</td><td>OUTPUT M1</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- T3 highlights -->
+  <h3 style="color:var(--t3);font-size:15px;margin:32px 0 8px;display:flex;align-items:center;gap:10px">
+    <span class="step-num" style="background:rgba(245,158,11,.12);color:var(--t3);border:1px solid rgba(245,158,11,.25)">T3</span>
+    Tableau Scénarios — Features de détection v5 (33 nouvelles)
+  </h3>
+  <div class="tbl-wrap">
+    <table class="ftable t3">
+      <thead><tr><th>Feature</th><th>Niveau</th><th>Signal</th><th>Modèle 2</th></tr></thead>
+      <tbody>
+        <tr><td>duplicate_url_count</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">URLs appelées plusieurs fois</td><td>✓ LightGBM+XGB</td></tr>
+        <tr><td>same_url_max_repeats</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">Max répétitions d'une URL</td><td>✓</td></tr>
+        <tr><td>failed_then_retried</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">URL en erreur puis re-appelée</td><td>✓ PRIORITÉ</td></tr>
+        <tr><td>same_url_different_status</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">Instabilité serveur</td><td>✓</td></tr>
+        <tr><td>empty_2xx_response_count</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">200 OK avec body vide</td><td>✓ PRIORITÉ</td></tr>
+        <tr><td>unexpected_html_on_api</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">HTML sur endpoint API</td><td>✓ PRIORITÉ</td></tr>
+        <tr><td>req_time_cv</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">CV temps réponse (std/mean)</td><td>✓ PRIORITÉ</td></tr>
+        <tr><td>ttfb_std_dev</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">Écart-type TTFB</td><td>✓</td></tr>
+        <tr><td>blocked_std_dev</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">Écart-type temps bloqué</td><td>✓</td></tr>
+        <tr><td>load_time_degradation_pct</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">Dégradation step 1 → dernier</td><td>✓</td></tr>
+        <tr><td>max_parallel_requests</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">Pic de parallélisme</td><td>✓</td></tr>
+        <tr><td>inter_request_gap_max_ms</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">Gap max entre requêtes</td><td>✓ (exclu IF)</td></tr>
+        <tr><td>response_size_cv</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">CV taille des réponses</td><td>✓</td></tr>
+        <tr><td>large_response_count</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">Réponses &gt; 500 Ko</td><td>✓</td></tr>
+        <tr><td>scenario_dom_vs_load_ratio_mean</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">DOM/Load moyen (bloquant)</td><td>✓ (exclu IF)</td></tr>
+        <tr><td>scenario_hour</td><td style="color:var(--dim)">Scénario</td><td style="color:var(--dim)">Heure du scénario</td><td>✓ LightGBM</td></tr>
+        <tr><td>step_duplicate_url_count</td><td style="color:var(--t2)">Step</td><td style="color:var(--dim)">URLs dupliquées par step</td><td>✓ (exclu IF)</td></tr>
+        <tr><td>req_time_std_by_step</td><td style="color:var(--t2)">Step</td><td style="color:var(--dim)">Std des temps par step</td><td>✓ (conditionnel XGB)</td></tr>
+        <tr><td>step_dom_vs_load_ratio</td><td style="color:var(--t2)">Step</td><td style="color:var(--dim)">DOM/Load par step</td><td>✓</td></tr>
+        <tr><td>step_ttfb_degradation_pct</td><td style="color:var(--t2)">Step</td><td style="color:var(--dim)">Dégradation TTFB vs step 1</td><td>✓ PRIORITÉ</td></tr>
+        <tr><td>step_failure_rate_increase</td><td style="color:var(--t2)">Step</td><td style="color:var(--dim)">Erreurs croissantes entre steps</td><td>✓ PRIORITÉ</td></tr>
+        <tr><td>step_time_vs_scenario_avg_ratio</td><td style="color:var(--t2)">Step</td><td style="color:var(--dim)">Step anormalement long</td><td>✓</td></tr>
+        <tr><td>ttfb_vs_step_mean_ratio</td><td style="color:var(--t1)">Requête</td><td style="color:var(--dim)">TTFB requête / moyenne step</td><td>→ agrégé</td></tr>
+        <tr><td>request_position_in_step_ratio</td><td style="color:var(--t1)">Requête</td><td style="color:var(--dim)">Position relative dans step</td><td>→ agrégé</td></tr>
+        <tr><td>failed_url_list</td><td style="color:var(--dim)">Invest.</td><td style="color:var(--dim)">Liste des URLs en erreur</td><td>✗ (investigation)</td></tr>
+        <tr><td>retried_url_list</td><td style="color:var(--dim)">Invest.</td><td style="color:var(--dim)">URLs retriées</td><td>✗</td></tr>
+        <tr><td>slowest_request_url</td><td style="color:var(--dim)">Invest.</td><td style="color:var(--dim)">URL la plus lente</td><td>✗</td></tr>
+        <tr><td>slowest_request_step</td><td style="color:var(--dim)">Invest.</td><td style="color:var(--dim)">Step contenant la requête la + lente</td><td>✗</td></tr>
+        <tr><td>most_repeated_url</td><td style="color:var(--dim)">Invest.</td><td style="color:var(--dim)">URL la plus répétée</td><td>✗</td></tr>
+        <tr><td>step_with_most_failures</td><td style="color:var(--dim)">Invest.</td><td style="color:var(--dim)">Step concentrant les erreurs</td><td>✗</td></tr>
+        <tr><td>dominant_error_status</td><td style="color:var(--dim)">Invest.</td><td style="color:var(--dim)">Code HTTP d'erreur le + fréquent</td><td>✗</td></tr>
+        <tr><td>error_domain_list</td><td style="color:var(--dim)">Invest.</td><td style="color:var(--dim)">Domaines ayant échoué</td><td>✗</td></tr>
+        <tr><td>is_incident</td><td style="color:var(--m2)">Label</td><td style="color:var(--dim)">Target variable (0/1)</td><td>TARGET</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div style="border-top:1px solid var(--line);margin-top:64px;padding:32px 0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px">
+  <div style="font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:1.5px">
+    HAR FEATURE EXTRACTOR v5 · ARCHITECTURE FINALE · HYBRID INCIDENT DETECTION
+  </div>
+  <div style="display:flex;gap:16px;flex-wrap:wrap">
+    <span class="pill" style="background:rgba(0,212,255,.1);color:var(--t1)">T1 ~131 features</span>
+    <span class="pill" style="background:rgba(167,139,250,.1);color:var(--t2)">T2 ~78 features</span>
+    <span class="pill" style="background:rgba(245,158,11,.1);color:var(--t3)">T3 ~161 features</span>
+    <span class="pill" style="background:rgba(16,185,129,.1);color:var(--m1)">M1 Isolation Forest</span>
+    <span class="pill" style="background:rgba(239,68,68,.1);color:var(--m2)">M2 XGB / LightGBM</span>
+  </div>
+</div>
+
+</div><!-- /main -->
+</body>
+</html>
