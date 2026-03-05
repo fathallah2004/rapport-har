@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HAR Pipeline — Architecture & Flux de Données</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Fraunces:ital,wght@0,300;0,600;0,800;1,300&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0e1117;--paper:#f4f1eb;--paper2:#ece8df;--paper3:#e2ddd3;
+  --accent:#c8460a;--accent2:#1a6b4a;--accent3:#1e3a7a;--gold:#b5860d;
+  --t1:#1e3a7a;--t2:#1a6b4a;--t3:#c8460a;--bl:#7b2d8b;
+  --muted:#6b6358;--border:#c8c2b5;
+  --code-bg:#1a1c22;--code-text:#e8e2d8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:'Fraunces',Georgia,serif;font-size:15px;line-height:1.7}
+
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--ink);color:#c8c2b5;padding:32px 0;overflow-y:auto;z-index:100;border-right:3px solid var(--accent)}
+.sidebar-title{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:3px;color:var(--accent);text-transform:uppercase;padding:0 24px 20px;border-bottom:1px solid #2a2d35;margin-bottom:16px}
+.nav-item{display:block;padding:9px 24px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:#7a8090;text-decoration:none;border-left:3px solid transparent;transition:all .15s}
+.nav-item:hover,.nav-item.active{color:#e8e2d8;border-left-color:var(--accent);background:#ffffff10}
+.nav-group{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:2px;color:#3a3d47;text-transform:uppercase;padding:20px 24px 6px}
+
+main{margin-left:220px;min-height:100vh}
+
+.hero{background:var(--ink);color:var(--paper);padding:80px 80px 70px;position:relative;overflow:hidden}
+.hero::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:40px;background:var(--paper);clip-path:polygon(0 100%,100% 100%,100% 0,50% 100%,0 0)}
+.hero-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:4px;color:var(--accent);text-transform:uppercase;margin-bottom:24px}
+.hero h1{font-size:clamp(36px,4.5vw,64px);font-weight:800;line-height:1.05;letter-spacing:-2px;margin-bottom:20px}
+.hero h1 em{font-style:italic;color:var(--accent);font-weight:300}
+.hero-sub{color:#9a9490;max-width:600px;font-weight:300;font-size:17px}
+.hero-params{display:flex;gap:10px;flex-wrap:wrap;margin-top:36px}
+.param-chip{font-family:'IBM Plex Mono',monospace;font-size:11px;background:#ffffff12;border:1px solid #ffffff22;padding:6px 14px;border-radius:2px;color:#e8e2d8}
+.param-chip b{color:var(--accent)}
+
+section{padding:64px 80px;border-bottom:1px solid var(--border)}
+section:last-child{border-bottom:none}
+.sec-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:4px;color:var(--muted);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;gap:10px}
+.sec-eyebrow::after{content:'';flex:1;height:1px;background:var(--border)}
+h2{font-size:clamp(24px,2.5vw,38px);font-weight:800;letter-spacing:-1px;margin-bottom:8px;line-height:1.1}
+h2 .ac{color:var(--accent)}
+.sec-lead{color:var(--muted);max-width:760px;margin-bottom:40px;font-weight:300;font-size:16px}
+h3{font-size:19px;font-weight:600;margin:36px 0 14px;letter-spacing:-.3px}
+
+.chip{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;padding:2px 7px;border-radius:2px;white-space:nowrap}
+.chip.pk{background:#b5860d22;color:var(--gold);border:1px solid #b5860d44}
+.chip.t1{background:#1e3a7a18;color:var(--t1);border:1px solid #1e3a7a44}
+.chip.t2{background:#1a6b4a18;color:var(--t2);border:1px solid #1a6b4a44}
+.chip.t3{background:#c8460a18;color:var(--t3);border:1px solid #c8460a44}
+.chip.bl{background:#7b2d8b18;color:var(--bl);border:1px solid #7b2d8b44}
+.chip.key{background:#7b2d8b18;color:var(--bl);border:1px solid #7b2d8b44}
+.chip.new{background:#c8460a12;color:var(--accent);border:1px solid #c8460a33}
+
+pre{background:var(--code-bg);color:var(--code-text);border-radius:6px;padding:22px 26px;font-family:'IBM Plex Mono',monospace;font-size:12.5px;line-height:1.75;overflow-x:auto;margin:16px 0;border-left:3px solid var(--accent)}
+.kw{color:#c084fc}.fn{color:#7eb3f7}.st{color:#6ec89e}.cm{color:#4a5568;font-style:italic}.nu{color:#f4a261}
+
+.tbl-wrap{overflow-x:auto;margin:20px 0;border:1px solid var(--border);border-radius:6px}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--ink);color:var(--paper)}
+th{padding:11px 14px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:500;letter-spacing:1.5px;text-transform:uppercase;white-space:nowrap;border-right:1px solid #2a2d35}
+th:last-child{border-right:none}
+td{padding:10px 14px;font-size:13px;border-bottom:1px solid var(--paper3);border-right:1px solid var(--paper3);vertical-align:top}
+td:last-child{border-right:none}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--paper2)}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:12px}
+
+.schema-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:24px 0}
+.schema-box{background:var(--paper2);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.schema-head{padding:12px 16px;font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border)}
+.schema-col-list{padding:8px 0}
+.schema-col-item{display:flex;justify-content:space-between;align-items:center;padding:6px 16px;border-bottom:1px solid var(--paper3);font-size:12px}
+.schema-col-item:last-child{border-bottom:none}
+.col-n{font-family:'IBM Plex Mono',monospace;color:var(--ink)}
+.col-t{color:var(--muted);font-size:11px}
+
+.formula{background:var(--ink);color:var(--paper);border-radius:4px;padding:18px 22px;margin:16px 0;font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:2}
+.formula .fl{color:#9a9490;font-size:10px;letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:4px}
+.fv{color:var(--accent)}.fv2{color:#6ec89e}
+
+.callout{border-left:4px solid var(--accent2);background:#1a6b4a0a;padding:16px 20px;border-radius:0 6px 6px 0;margin:20px 0;font-size:13px}
+.callout.warn{border-color:var(--gold);background:#b5860d0a}
+.callout.info{border-color:var(--t1);background:#1e3a7a0a}
+.callout strong{font-weight:600}
+
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin:24px 0}
+.stat-box{background:var(--paper2);border:1px solid var(--border);border-radius:6px;padding:18px;text-align:center}
+.stat-n{font-family:'IBM Plex Mono',monospace;font-size:36px;font-weight:600;display:block;line-height:1;margin-bottom:6px}
+.stat-l{font-size:11px;color:var(--muted);font-weight:300}
+
+.flow-wrap{overflow-x:auto;margin:32px 0}
+.flow{display:flex;align-items:center;min-width:900px;background:var(--paper2);border:1px solid var(--border);border-radius:6px;padding:28px 20px}
+.flow-node{flex:1;text-align:center;padding:0 6px}
+.flow-box{padding:14px 10px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;border:1.5px solid;line-height:1.4}
+.flow-icon{font-size:20px;margin-bottom:6px;display:block}
+.fn1{background:#1e3a7a10;border-color:#1e3a7a44;color:var(--t1)}
+.fn2{background:#c8460a10;border-color:#c8460a44;color:var(--t3)}
+.fn3{background:#1a6b4a10;border-color:#1a6b4a44;color:var(--t2)}
+.fn4{background:#7b2d8b10;border-color:#7b2d8b44;color:var(--bl)}
+.fn5{background:#b5860d10;border-color:#b5860d44;color:var(--gold)}
+.flow-arrow{color:var(--muted);font-size:22px;flex-shrink:0;margin:0 -2px}
+.flow-sub{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:8px;line-height:1.4}
+
+.pipeline{margin:32px 0}
+.pipe-row{display:grid;grid-template-columns:70px 1fr;gap:0;margin-bottom:0}
+.pipe-left{position:relative;display:flex;flex-direction:column;align-items:center}
+.pipe-num{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;z-index:1;flex-shrink:0}
+.pipe-line{flex:1;width:2px;background:var(--border);margin:0 auto;min-height:24px}
+.pipe-row:last-child .pipe-line{display:none}
+.pipe-right{background:var(--paper2);border:1px solid var(--border);border-radius:6px;padding:16px 20px;margin-bottom:10px}
+.pipe-title{font-weight:600;font-size:14px;margin-bottom:4px}
+.pipe-desc{color:var(--muted);font-size:13px;font-weight:300}
+
+.window-diagram{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:24px 0}
+.win-box{background:var(--paper2);border:1px solid var(--border);border-radius:6px;padding:20px}
+.win-title{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:1px;color:var(--muted);text-transform:uppercase;margin-bottom:10px}
+.win-num{font-size:52px;font-weight:800;line-height:1;font-family:'Fraunces',serif;letter-spacing:-2px;margin-bottom:6px}
+.win-desc{font-size:13px;color:var(--muted);font-weight:300}
+.win-trigger{margin-top:12px;padding:8px 12px;background:var(--paper3);border-radius:3px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted)}
+
+.hash-diagram{display:flex;align-items:center;flex-wrap:wrap;gap:8px;background:var(--paper2);border:1px solid var(--border);border-radius:6px;padding:20px;margin:16px 0}
+.hash-part{background:var(--paper3);border:1px solid var(--border);border-radius:3px;padding:8px 12px;font-family:'IBM Plex Mono',monospace;font-size:11px;text-align:center}
+.hash-part .hl{font-size:9px;color:var(--muted);display:block;margin-bottom:3px;letter-spacing:1px;text-transform:uppercase}
+.hash-part .hv{font-weight:500}
+.hash-plus{color:var(--muted);font-size:16px;padding:0 2px}
+.hash-result{background:var(--ink);color:var(--paper);border-radius:3px;padding:8px 14px;font-family:'IBM Plex Mono',monospace;font-size:11px}
+
+.sim-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--paper3)}
+.sim-item:last-child{border-bottom:none}
+.sim-name{font-family:'IBM Plex Mono',monospace;font-size:12px;width:220px;flex-shrink:0}
+.sim-bar-wrap{flex:1;height:8px;background:var(--paper3);border-radius:4px}
+.sim-bar-fill{height:100%;border-radius:4px}
+.sim-pts{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;width:28px;text-align:right}
+
+.decay-bar{height:12px;background:linear-gradient(to right,#1a6b4a,#b5860d,#c8460a);border-radius:6px;margin:12px 0}
+.decay-marks{display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--paper)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+@media(max-width:900px){.sidebar{display:none}main{margin-left:0}section{padding:40px 20px}.hero{padding:40px 20px 50px}}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-title">HAR Pipeline v4</div>
+  <div class="nav-group">Architecture</div>
+  <a class="nav-item" href="#flux">① Flux Global</a>
+  <a class="nav-item" href="#extraction">② Extraction HAR</a>
+  <div class="nav-group">Tableaux</div>
+  <a class="nav-item" href="#t3">③ T3 — Scénario</a>
+  <a class="nav-item" href="#t2">④ T2 — Steps</a>
+  <a class="nav-item" href="#t1">⑤ T1 — Requêtes</a>
+  <div class="nav-group">Baseline</div>
+  <a class="nav-item" href="#keys">⑥ Clés Baseline</a>
+  <a class="nav-item" href="#buffer">⑦ Buffer Temporel</a>
+  <a class="nav-item" href="#fenetres">⑧ Fenêtres & Recalcul</a>
+  <a class="nav-item" href="#tables-db">⑨ Tables PostgreSQL</a>
+  <a class="nav-item" href="#fallback">⑩ Fallback & Similarité</a>
+  <div class="nav-group">Enrichissement</div>
+  <a class="nav-item" href="#zscore">⑪ Z-Scores & Anomalie</a>
+  <a class="nav-item" href="#criticite">⑫ Criticité</a>
+</nav>
+
+<main>
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Documentation Technique · HAR ML Pipeline v4.0</div>
+  <h1>Architecture &amp;<br><em>Flux de Données</em></h1>
+  <p class="hero-sub">Du fichier HAR brut aux features ML enrichies — cycle de vie complet, gestion des baselines, enrichissement statistique et détection d'anomalies.</p>
+  <div class="hero-params">
+    <div class="param-chip">WINDOW_SHORT <b>= 5</b></div>
+    <div class="param-chip">WINDOW_LONG = MIN_OBS <b>= 100</b></div>
+    <div class="param-chip">Z_WARN <b>= 2.0</b> · Z_ALERT <b>= 3.0</b></div>
+    <div class="param-chip">Niveaux : <b>SCENARIO · STEP · REQUEST</b></div>
+    <div class="param-chip">Score similarité max <b>13 pts</b></div>
+  </div>
+</div>
+
+<!-- §1 FLUX -->
+<section id="flux">
+  <div class="sec-eyebrow">Section 01</div>
+  <h2>Flux <span class="ac">Global</span></h2>
+  <p class="sec-lead">6 étapes séquentielles du fichier HAR brut jusqu'à l'export enrichi prêt pour XGBoost.</p>
+
+  <div class="flow-wrap"><div class="flow">
+    <div class="flow-node"><div class="flow-box fn1"><span class="flow-icon">📁</span>Fichier .har</div><div class="flow-sub">JSON navigateur<br>pages + entries</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="flow-box fn2"><span class="flow-icon">🔍</span>HARExtractor</div><div class="flow-sub">build_t1/t2/t3<br>80+55+117 features</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="flow-box fn3"><span class="flow-icon">🗄</span>Buffer Insert</div><div class="flow-sub">baseline_run_buffer<br>sain / incident séparé</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="flow-box fn4"><span class="flow-icon">📊</span>Recalcul Stats</div><div class="flow-sub">@5 runs SHORT<br>@100 runs LONG</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="flow-box fn5"><span class="flow-icon">⚡</span>Enrichissement</div><div class="flow-sub">z-scores, robust_z<br>sliding, anomalie</div></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node"><div class="flow-box fn1"><span class="flow-icon">💾</span>Export CSV/JSON</div><div class="flow-sub">T1/T2/T3 enrichis<br>+ obs mode</div></div>
+  </div></div>
+
+  <div class="pipeline">
+    <div class="pipe-row"><div class="pipe-left"><div class="pipe-num" style="background:var(--t1);color:#fff">1</div><div class="pipe-line"></div></div><div class="pipe-right"><div class="pipe-title">SCAN — Découverte des fichiers .har</div><div class="pipe-desc">Le pipeline scanne <code>data_dir</code> et retourne la liste triée de tous les <code>.har</code>. Chaque fichier = un run = une exécution complète du scénario capturé par Playwright, k6 Browser ou équivalent.</div></div></div>
+    <div class="pipe-row"><div class="pipe-left"><div class="pipe-num" style="background:var(--t3);color:#fff">2</div><div class="pipe-line"></div></div><div class="pipe-right"><div class="pipe-title">EXTRACT — HARExtractor construit T1 / T2 / T3</div><div class="pipe-desc"><code>HARExtractor(har_path, scenario_id)</code> lit le JSON HAR et construit les 3 tableaux. Les clés FK (<code>baseline_hash</code>, <code>step_baseline_key</code>, <code>scenario_id</code>) sont générées ici directement — aucune étape add_keys séparée.</div></div></div>
+    <div class="pipe-row"><div class="pipe-left"><div class="pipe-num" style="background:var(--t2);color:#fff">3</div><div class="pipe-line"></div></div><div class="pipe-right"><div class="pipe-title">BUFFER — Insertion dans baseline_run_buffer</div><div class="pipe-desc">Chaque valeur métrique est insérée avec <code>run_id</code>, <code>level</code> et le flag <code>is_incident</code>. Le trigger de recalcul utilise <code>COUNT(DISTINCT run_id)</code> dans ce buffer — plus fiable que <code>run_count_total</code>.</div></div></div>
+    <div class="pipe-row"><div class="pipe-left"><div class="pipe-num" style="background:var(--bl);color:#fff">4</div><div class="pipe-line"></div></div><div class="pipe-right"><div class="pipe-title">RECALCUL — Mise à jour statistiques baseline</div><div class="pipe-desc">À chaque fenêtre SHORT (5 runs) ou LONG (100 runs) complète, les statistiques sont recalculées depuis le buffer avec winsorisation IQR (T1/T2) et stockées dans <code>baseline_statistics</code>.</div></div></div>
+    <div class="pipe-row"><div class="pipe-left"><div class="pipe-num" style="background:var(--gold);color:#fff">5</div><div class="pipe-line"></div></div><div class="pipe-right"><div class="pipe-title">ENRICH — Z-scores, robust_z, moyennes glissantes</div><div class="pipe-desc">Chaque tableau reçoit les features dérivées. Cold start (&lt;5 obs) : donneur similaire. Partial (5–99 obs) : stats propres partielles. Complet (≥100) : baseline propre stable.</div></div></div>
+    <div class="pipe-row"><div class="pipe-left"><div class="pipe-num" style="background:var(--t1);color:#fff">6</div><div class="pipe-line"></div></div><div class="pipe-right"><div class="pipe-title">EXPORT — CSV / JSON + observabilité OBS_KEY</div><div class="pipe-desc">T1/T2/T3 enrichis exportés. Si <code>OBS_KEY</code> est défini, des dossiers horodatés capturent chaque étape (extract brut → baseline status → enrichi → résumé anomalie → pipeline global).</div></div></div>
+  </div>
+</section>
+
+<!-- §2 EXTRACTION -->
+<section id="extraction">
+  <div class="sec-eyebrow">Section 02</div>
+  <h2>Extraction <span class="ac">depuis le HAR</span></h2>
+  <p class="sec-lead">Un fichier HAR (HTTP Archive) est un JSON standardisé capturant toutes les requêtes réseau d'une session navigateur. Le pipeline en extrait 3 niveaux d'abstraction imbriqués.</p>
+
+  <pre><span class="cm">// Structure .har — les deux nœuds exploités par le pipeline</span>
+{
+  <span class="st">"log"</span>: {
+    <span class="st">"pages"</span>: [            <span class="cm">// ← chaque page = 1 step → alimente T2</span>
+      { <span class="st">"id"</span>: <span class="st">"page_1"</span>, <span class="st">"title"</span>: <span class="st">"Login"</span>, <span class="st">"startedDateTime"</span>: <span class="st">"2024-01-15T10:30:00Z"</span>,
+        <span class="st">"pageTimings"</span>: { <span class="st">"onContentLoad"</span>: <span class="nu">450</span>, <span class="st">"onLoad"</span>: <span class="nu">1200</span> } }
+    ],
+    <span class="st">"entries"</span>: [          <span class="cm">// ← chaque entrée = 1 requête → alimente T1</span>
+      { <span class="st">"pageref"</span>: <span class="st">"page_1"</span>,   <span class="cm">// lien vers le step parent</span>
+        <span class="st">"request"</span>: { <span class="st">"method"</span>: <span class="st">"GET"</span>, <span class="st">"url"</span>: <span class="st">"https://api/users"</span> },
+        <span class="st">"response"</span>: { <span class="st">"status"</span>: <span class="nu">200</span>, <span class="st">"content"</span>: { <span class="st">"size"</span>: <span class="nu">4200</span> } },
+        <span class="st">"timings"</span>: { <span class="st">"dns"</span>: <span class="nu">12</span>, <span class="st">"connect"</span>: <span class="nu">45</span>, <span class="st">"wait"</span>: <span class="nu">89</span>, <span class="st">"receive"</span>: <span class="nu">8</span> } }
+    ]
+    <span class="cm">// Toutes les entries → agrégées en T3 (1 ligne/run)</span>
+  }
+}</pre>
+
+  <div class="stats-row">
+    <div class="stat-box"><span class="stat-n" style="color:var(--t3)">117</span><span class="stat-l">features T3<br>Scénario — 1 ligne/run</span></div>
+    <div class="stat-box"><span class="stat-n" style="color:var(--t2)">55</span><span class="stat-l">features T2<br>Step — 1 ligne/page HAR</span></div>
+    <div class="stat-box"><span class="stat-n" style="color:var(--t1)">80</span><span class="stat-l">features T1<br>Requête — 1 ligne/entry</span></div>
+    <div class="stat-box"><span class="stat-n" style="color:var(--bl)">+6</span><span class="stat-l">métriques nouvelles<br>ajoutées en v2.1</span></div>
+  </div>
+</section>
+
+<!-- §3 T3 -->
+<section id="t3">
+  <div class="sec-eyebrow">Section 03 · Tableau T3</div>
+  <h2><span class="ac">T3</span> — Tableau Scénario</h2>
+  <p class="sec-lead">Une ligne par run HAR. Agrège toutes les requêtes en métriques globales. Table principale pour XGBoost : contient <code>is_incident</code>, <code>ml_split</code> et <code>xgb_sample_weight</code>.</p>
+
+  <h3>Identifiants &amp; Temporel</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Feature</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">scenario_id <span class="chip pk">PK</span></td><td>string</td><td>Identifiant du scénario, ex: <code>scn_login</code> — passé en CLI <code>--scenario</code></td></tr>
+      <tr><td class="mono">run_timestamp</td><td>ISO str</td><td><code>startedDateTime</code> du 1er page HAR — sert au tri chronologique pour <code>ml_split</code> (pas la date de traitement)</td></tr>
+      <tr><td class="mono">hour_sin / hour_cos</td><td>float</td><td>Encodage cyclique sin(2π·h/24) et cos(2π·h/24) — capture patterns jour/nuit sans discontinuité à minuit</td></tr>
+      <tr><td class="mono">is_business_hours</td><td>0/1</td><td>1 si entre 8h et 18h — contexte charge métier</td></tr>
+      <tr><td class="mono">is_night</td><td>0/1</td><td>1 si entre 0h et 6h — contexte batch / maintenance</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Performance &amp; Timings</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Feature</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">scenario_duration_sec</td><td>float</td><td>Durée totale du run : ts dernière réponse − ts première requête (secondes)</td></tr>
+      <tr><td class="mono">scenario_dom_loaded_ms</td><td>int</td><td>DOMContentLoaded premier step (pageTimings.onContentLoad)</td></tr>
+      <tr><td class="mono">scenario_page_load_ms</td><td>int</td><td>Page Load Complete premier step (pageTimings.onLoad)</td></tr>
+      <tr><td class="mono">scenario_ttfb_ms_mean</td><td>float</td><td>TTFB moyen sur toutes les requêtes (timing.wait nettoyé)</td></tr>
+      <tr><td class="mono">scenario_ttfb_ms_p95/p99</td><td>float</td><td>Percentiles 95/99 du TTFB — détectent les pics et seuils SLA</td></tr>
+      <tr><td class="mono">scenario_req_time_ms_mean/p95/max</td><td>float</td><td>Temps total requête moyen / P95 / maximum</td></tr>
+      <tr><td class="mono">scenario_dns_ms_mean</td><td>float</td><td>Temps DNS moyen sur le run</td></tr>
+      <tr><td class="mono">scenario_connect_ms_mean</td><td>float</td><td>Temps TCP connect moyen</td></tr>
+      <tr><td class="mono">scenario_ssl_ms_mean</td><td>float</td><td>Temps SSL/TLS handshake moyen</td></tr>
+      <tr><td class="mono">scenario_blocked_ms_mean <span class="chip new">v2.1</span></td><td>float</td><td>Temps bloqué moyen en file d'attente TCP</td></tr>
+      <tr><td class="mono">scenario_blocked_ms_p95 <span class="chip new">v2.1</span></td><td>float</td><td>Percentile 95 temps bloqué — détecte saturation connexions</td></tr>
+      <tr><td class="mono">scenario_dns_ms_p95 <span class="chip new">v2.1</span></td><td>float</td><td>Percentile 95 DNS — résolutions lentes sporadiques</td></tr>
+      <tr><td class="mono">scenario_connect_ms_p95 <span class="chip new">v2.1</span></td><td>float</td><td>Percentile 95 connexion TCP</td></tr>
+      <tr><td class="mono">scenario_ssl_ms_p95 <span class="chip new">v2.1</span></td><td>float</td><td>Percentile 95 SSL/TLS</td></tr>
+      <tr><td class="mono">req_time_cv</td><td>float</td><td>Coefficient de variation = std/mean des temps requête (0→stable, &gt;1→très variable)</td></tr>
+      <tr><td class="mono">ttfb_std_dev</td><td>float</td><td>Écart-type du TTFB — dispersion des latences</td></tr>
+      <tr><td class="mono">inter_request_gap_max_ms</td><td>float</td><td>Gap maximal entre deux requêtes consécutives — détecte pauses réseau</td></tr>
+      <tr><td class="mono">load_time_degradation_pct</td><td>float</td><td>% dégradation temps chargement vs premier step — slowdown progressif</td></tr>
+      <tr><td class="mono">request_density</td><td>float</td><td>Requêtes par seconde sur le run</td></tr>
+      <tr><td class="mono">scenario_bandwidth <span class="chip new">v2.1</span></td><td>float</td><td>Débit global : bytes_downloaded / duration_sec (bytes/s)</td></tr>
+      <tr><td class="mono">scenario_dom_vs_load_ratio_mean</td><td>float</td><td>Ratio DOMContentLoaded / onLoad moyen — équilibre rendu JS</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Erreurs &amp; Scores d'anomalie structurelle</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Feature</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">scenario_failure_rate_pct</td><td>float</td><td>% requêtes en erreur (4xx + 5xx + timeout + status 0)</td></tr>
+      <tr><td class="mono">scenario_api_error_rate</td><td>float</td><td>% erreurs sur appels API uniquement</td></tr>
+      <tr><td class="mono">timeout_cascade_score</td><td>float</td><td>Score 0–1 : proportion de timeouts groupés sur même domaine — cascade réseau</td></tr>
+      <tr><td class="mono">error_intermittence_score</td><td>float</td><td>Ratio erreurs mêmes URLs répétées — instabilité intermittente</td></tr>
+      <tr><td class="mono">error_concentration_score</td><td>float</td><td>Part du domaine le plus défaillant dans le total d'erreurs</td></tr>
+      <tr><td class="mono">step_failure_variance</td><td>float</td><td>Variance du taux d'échec entre les steps — dégradation localisée vs globale</td></tr>
+      <tr><td class="mono">error_cascade_type</td><td>str</td><td>Type de cascade détecté : DNS | SSL | CONN | NONE</td></tr>
+      <tr><td class="mono">empty_2xx_response_count</td><td>int</td><td>Réponses HTTP 200 avec 0 bytes — erreurs silencieuses</td></tr>
+      <tr><td class="mono">unexpected_html_on_api</td><td>0/1</td><td>API retournant du HTML (page d'erreur au lieu de JSON)</td></tr>
+      <tr><td class="mono">duplicate_url_count</td><td>int</td><td>Requêtes dupliquées vers la même URL — N+1, boucle de retry</td></tr>
+      <tr><td class="mono">failed_then_retried</td><td>int</td><td>Nombre de requêtes ayant échoué puis réessayé (même URL, séquentielles)</td></tr>
+      <tr><td class="mono">is_total_failure</td><td>0/1</td><td>1 si toutes les requêtes du run ont échoué</td></tr>
+      <tr><td class="mono">is_single_request_failure</td><td>0/1</td><td>1 si run avec une seule requête et elle a échoué</td></tr>
+      <tr><td class="mono">timings_all_zero</td><td>0/1</td><td>1 si tous les timings réseau sont à 0 — artefact de capture</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Cache, Réseau &amp; Sécurité</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Feature</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">scenario_cache_hit_pct <span class="chip new">v2.1</span></td><td>float</td><td>% requêtes servies depuis cache (status 304 Not Modified)</td></tr>
+      <tr><td class="mono">scenario_compression_pct</td><td>float</td><td>% réponses compressées (gzip / brotli)</td></tr>
+      <tr><td class="mono">scenario_http2_count</td><td>int</td><td>Nombre de requêtes via HTTP/2</td></tr>
+      <tr><td class="mono">scenario_third_party_pct</td><td>float</td><td>% requêtes vers domaines tiers</td></tr>
+      <tr><td class="mono">scenario_connection_reuse_pct</td><td>float</td><td>% connexions TCP réutilisées (keepalive)</td></tr>
+      <tr><td class="mono">scenario_https_pct</td><td>float</td><td>% requêtes HTTPS</td></tr>
+      <tr><td class="mono">scenario_with_hsts</td><td>int</td><td>Nb réponses avec header HSTS</td></tr>
+      <tr><td class="mono">scenario_with_csp</td><td>int</td><td>Nb réponses avec header Content-Security-Policy</td></tr>
+      <tr><td class="mono">scenario_with_auth</td><td>int</td><td>Nb requêtes avec header Authorization</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Labels ML &amp; Pondération</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Feature</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">is_incident</td><td>0/1/None</td><td>Label cible XGBoost. None = non labellisé. Passé via CLI <code>--incident</code></td></tr>
+      <tr><td class="mono">xgb_sample_weight</td><td>float</td><td>Poids inverse de fréquence : <code>n_total / (2 × n_classe)</code> — équilibre incidents/normaux automatique</td></tr>
+      <tr><td class="mono">ml_split</td><td>train/test</td><td>80% runs les plus anciens (par <code>run_timestamp</code> réel) → train, 20% récents → test. Pas de data leakage quel que soit l'ordre de traitement.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- §4 T2 -->
+<section id="t2">
+  <div class="sec-eyebrow">Section 04 · Tableau T2</div>
+  <h2><span class="ac">T2</span> — Tableau Steps</h2>
+  <p class="sec-lead">Une ligne par page HAR par run. Chaque step = une page du scénario. Les requêtes sont filtrées par <code>pageref</code> pour n'agréger que celles de ce step.</p>
+
+  <h3>Identifiants &amp; Clés</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Feature</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">step_baseline_key <span class="chip pk">PK</span></td><td>string</td><td>Clé lisible : <code>scenario_id|step|N</code> — ex: <code>scn_login|step|2</code></td></tr>
+      <tr><td class="mono">step_hash</td><td>str(16)</td><td>MD5[:16] de step_baseline_key — clé compacte utilisée dans baseline_statistics (level='STEP')</td></tr>
+      <tr><td class="mono">scenario_id <span class="chip t3">FK→T3</span></td><td>string</td><td>Référence vers le scénario parent</td></tr>
+      <tr><td class="mono">step_index</td><td>int</td><td>Position du step dans le scénario (1-based)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Performance TTFB &amp; Timings</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Feature</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">step_ttfb_mean_ms <span class="chip key">KEY</span></td><td>float</td><td>TTFB moyen des requêtes du step — métrique clé score anomalie STEP</td></tr>
+      <tr><td class="mono">step_ttfb_p95_ms</td><td>float</td><td>Percentile 95 TTFB du step</td></tr>
+      <tr><td class="mono">step_ttfb_p99_ms <span class="chip new">v2.1</span></td><td>float</td><td>Percentile 99 TTFB — pires cas</td></tr>
+      <tr><td class="mono">step_ttfb_iqr_ms</td><td>float</td><td>IQR TTFB — dispersion intra-step (distribution bimodale si élevé)</td></tr>
+      <tr><td class="mono">step_time_mean_ms <span class="chip key">KEY</span></td><td>float</td><td>Temps total requête moyen du step</td></tr>
+      <tr><td class="mono">step_time_p95_ms</td><td>float</td><td>Percentile 95 temps requête</td></tr>
+      <tr><td class="mono">step_time_p99_ms <span class="chip new">v2.1</span></td><td>float</td><td>Percentile 99 temps requête</td></tr>
+      <tr><td class="mono">step_bimodal_score</td><td>float</td><td>Score de bimodalité — distribution en 2 pics = comportement anormal (fast-path vs slow-path)</td></tr>
+      <tr><td class="mono">step_dom_content_loaded_ms</td><td>int</td><td>DOMContentLoaded du step (pageTimings.onContentLoad)</td></tr>
+      <tr><td class="mono">step_page_load_complete_ms</td><td>int</td><td>Page Load Complete du step (pageTimings.onLoad)</td></tr>
+      <tr><td class="mono">step_connect_mean_ms <span class="chip new">v2.1</span></td><td>float</td><td>Temps TCP connect moyen du step</td></tr>
+      <tr><td class="mono">step_ssl_mean_ms <span class="chip new">v2.1</span></td><td>float</td><td>Temps SSL/TLS moyen du step</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Erreurs &amp; Features Cross-Step</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Feature</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">step_failure_rate_pct <span class="chip key">KEY</span></td><td>float</td><td>% requêtes en erreur dans ce step</td></tr>
+      <tr><td class="mono">step_api_error_rate <span class="chip key">KEY</span></td><td>float</td><td>% erreurs sur appels API du step</td></tr>
+      <tr><td class="mono">step_cumulative_failure_rate <span class="chip key">KEY</span></td><td>float</td><td>Taux d'échec cumulé depuis le début du scénario jusqu'à ce step — tendance de dégradation</td></tr>
+      <tr><td class="mono">step_ttfb_degradation_pct</td><td>float</td><td>% dégradation TTFB vs step précédent (calcul cross-step séquentiel)</td></tr>
+      <tr><td class="mono">step_ttfb_vs_previous_step</td><td>float</td><td>Ratio TTFB moyen step courant / step précédent</td></tr>
+      <tr><td class="mono">step_failure_rate_increase</td><td>float</td><td>Augmentation du taux d'échec vs step précédent</td></tr>
+      <tr><td class="mono">step_time_vs_scenario_avg_ratio</td><td>float</td><td>Ratio temps step / temps moyen scénario (1=normal, &gt;2=step anormalement lent)</td></tr>
+      <tr><td class="mono">step_third_party_pct <span class="chip new">v2.1</span></td><td>float</td><td>% requêtes vers domaines tiers dans ce step</td></tr>
+      <tr><td class="mono">step_redirects_count <span class="chip new">v2.1</span></td><td>int</td><td>Nombre de redirections HTTP dans ce step</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- §5 T1 -->
+<section id="t1">
+  <div class="sec-eyebrow">Section 05 · Tableau T1</div>
+  <h2><span class="ac">T1</span> — Tableau Requêtes</h2>
+  <p class="sec-lead">Une ligne par entrée HAR. Niveau le plus granulaire — chaque requête HTTP avec ses timings complets, sa position dans le waterfall et ses liaisons FK vers step et scénario.</p>
+
+  <h3>Identifiants &amp; Clés FK</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Feature</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">baseline_hash <span class="chip pk">PK</span></td><td>str(12)</td><td>MD5[:12] de la clé canonique — stable entre runs pour la même route fonctionnelle</td></tr>
+      <tr><td class="mono">step_baseline_key <span class="chip t2">FK→T2</span></td><td>string</td><td>Référence vers le step parent (même valeur que T2.step_baseline_key)</td></tr>
+      <tr><td class="mono">scenario_id <span class="chip t3">FK→T3</span></td><td>string</td><td>Référence vers le scénario</td></tr>
+      <tr><td class="mono">request_position</td><td>int</td><td>Position absolue dans le waterfall du run (0-based)</td></tr>
+      <tr><td class="mono">resource_type_encoded</td><td>int 0–9</td><td>Type ressource : XHR=1, JS=2, CSS=3, img=4, font=5, HTML=6, WS=7, media=8, autre=9</td></tr>
+      <tr><td class="mono">request_method_encoded</td><td>int 1–7</td><td>Méthode HTTP : GET=1, POST=2, PUT=3, DELETE=4, PATCH=5, HEAD=6, OPTIONS=7</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Timings réseau (6 phases + agrégats)</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Feature</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">timing_wait_ms_clean <span class="chip key">KEY</span></td><td>float</td><td>TTFB = timing.wait nettoyé (valeurs &lt;0 → 0)</td></tr>
+      <tr><td class="mono">timing_total_ms <span class="chip key">KEY</span></td><td>float</td><td>Temps total = somme de toutes les phases timing</td></tr>
+      <tr><td class="mono">timing_dns_ms_clean</td><td>float</td><td>Résolution DNS nettoyée</td></tr>
+      <tr><td class="mono">timing_connect_ms_clean</td><td>float</td><td>Établissement connexion TCP nettoyé</td></tr>
+      <tr><td class="mono">timing_ssl_ms_clean</td><td>float</td><td>Handshake SSL/TLS nettoyé</td></tr>
+      <tr><td class="mono">timing_blocked_ms_clean <span class="chip key">KEY</span></td><td>float</td><td>Temps bloqué en file d'attente connexion</td></tr>
+      <tr><td class="mono">timing_receive_ms_clean <span class="chip new">v2.1</span></td><td>float</td><td>Temps de téléchargement du corps de réponse</td></tr>
+      <tr><td class="mono">timing_connection_phase_total</td><td>float</td><td>DNS + connect + SSL — coût réseau pur sans serveur</td></tr>
+      <tr><td class="mono">timing_ratio_wait</td><td>float</td><td>Part TTFB / total — proche de 1 = serveur lent</td></tr>
+      <tr><td class="mono">timing_ratio_blocked</td><td>float</td><td>Part temps bloqué / total — proche de 1 = saturation</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Réponse, Position &amp; Features v2.1</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Feature</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">response_body_size <span class="chip key">KEY</span></td><td>int</td><td>Taille corps réponse en bytes</td></tr>
+      <tr><td class="mono">response_compression_ratio</td><td>float</td><td>Ratio compression : taille transférée / taille décompressée</td></tr>
+      <tr><td class="mono">response_is_error</td><td>0/1</td><td>1 si status 4xx / 5xx / timeout / 0</td></tr>
+      <tr><td class="mono">response_is_timeout</td><td>0/1</td><td>1 si status 0 (connexion échouée)</td></tr>
+      <tr><td class="mono">response_is_cache_hit_304 <span class="chip new">v2.1</span></td><td>0/1</td><td>1 si status 304 Not Modified — cache hit</td></tr>
+      <tr><td class="mono">response_is_compressed <span class="chip new">v2.1</span></td><td>0/1</td><td>1 si Content-Encoding: gzip ou br</td></tr>
+      <tr><td class="mono">network_connection_reused <span class="chip new">v2.1</span></td><td>0/1</td><td>1 si connexion TCP réutilisée (connect_ms = 0)</td></tr>
+      <tr><td class="mono">request_has_postdata <span class="chip new">v2.1</span></td><td>0/1</td><td>1 si la requête contient un corps POST</td></tr>
+      <tr><td class="mono">request_querystring_count <span class="chip new">v2.1</span></td><td>int</td><td>Nombre de paramètres querystring fonctionnels (hors tokens/sessions filtrés)</td></tr>
+      <tr><td class="mono">waterfall_position_ratio</td><td>float</td><td>Position relative dans le waterfall (0=première, 1=dernière)</td></tr>
+      <tr><td class="mono">sequential_ttfb_sum_ms</td><td>float</td><td>Somme TTFB des appels séquentiels vers même endpoint — détecte N+1 queries</td></tr>
+      <tr><td class="mono">response_size_anomaly</td><td>0/1</td><td>1 si taille &lt;10 bytes pour un 2xx — erreur silencieuse</td></tr>
+      <tr><td class="mono">is_ghost_connection</td><td>0/1</td><td>1 si connexion établie mais aucune réponse reçue</td></tr>
+      <tr><td class="mono">is_first_request_of_step</td><td>0/1</td><td>1 si première requête du step — souvent la plus lente (DNS froid)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- §6 CLÉS -->
+<section id="keys">
+  <div class="sec-eyebrow">Section 06</div>
+  <h2>Clés <span class="ac">Baseline</span></h2>
+  <p class="sec-lead">Chaque entité possède une clé unique stable entre les runs. Ces clés lient les tableaux d'extraction aux tables baseline PostgreSQL.</p>
+
+  <h3>Construction de baseline_hash (T1)</h3>
+  <div class="hash-diagram">
+    <div class="hash-part"><span class="hl">Méthode</span><span class="hv">GET</span></div>
+    <div class="hash-plus">+</div>
+    <div class="hash-part"><span class="hl">Domaine</span><span class="hv">api.site.com</span></div>
+    <div class="hash-plus">+</div>
+    <div class="hash-part"><span class="hl">Chemin normalisé</span><span class="hv">/users/{id}/orders</span></div>
+    <div class="hash-plus">+</div>
+    <div class="hash-part"><span class="hl">Type</span><span class="hv">TYPE:1</span></div>
+    <div class="hash-plus">+</div>
+    <div class="hash-part"><span class="hl">QS stables</span><span class="hv">QS:page,sort</span></div>
+    <div class="hash-plus">+</div>
+    <div class="hash-part"><span class="hl">POST params</span><span class="hv">POST:</span></div>
+    <div class="hash-plus">→</div>
+    <div class="hash-result">MD5[:12]<br><b>a3f7b2c91d40</b></div>
+  </div>
+  <div class="callout info">Les IDs numériques dans les chemins sont normalisés (<code>/users/123</code> → <code>/users/{id}</code>) pour que toutes les requêtes vers la même route fonctionnelle partagent la même baseline, quelle que soit la ressource ciblée.</div>
+
+  <h3>Clés STEP et SCENARIO</h3>
+  <div class="schema-grid">
+    <div class="schema-box">
+      <div class="schema-head" style="background:#c8460a18;border-color:#c8460a33"><span class="chip t3">T3 SCENARIO</span></div>
+      <div class="schema-col-list">
+        <div class="schema-col-item"><span class="col-n">baseline_key</span><span class="col-t">= scenario_id directement</span></div>
+        <div class="schema-col-item"><span class="col-n">ex: "scn_login"</span><span class="col-t">passé en CLI --scenario</span></div>
+        <div class="schema-col-item"><span class="col-n">level</span><span class="col-t">'SCENARIO'</span></div>
+      </div>
+    </div>
+    <div class="schema-box">
+      <div class="schema-head" style="background:#1a6b4a18;border-color:#1a6b4a33"><span class="chip t2">T2 STEP</span></div>
+      <div class="schema-col-list">
+        <div class="schema-col-item"><span class="col-n">step_raw_key</span><span class="col-t">"scn_login|step|1"</span></div>
+        <div class="schema-col-item"><span class="col-n">step_hash (DB key)</span><span class="col-t">MD5[:16](raw_key)</span></div>
+        <div class="schema-col-item"><span class="col-n">level</span><span class="col-t">'STEP'</span></div>
+      </div>
+    </div>
+    <div class="schema-box">
+      <div class="schema-head" style="background:#1e3a7a18;border-color:#1e3a7a33"><span class="chip t1">T1 REQUEST</span></div>
+      <div class="schema-col-list">
+        <div class="schema-col-item"><span class="col-n">baseline_hash</span><span class="col-t">MD5[:12](clé canonique)</span></div>
+        <div class="schema-col-item"><span class="col-n">stable</span><span class="col-t">entre tous les runs</span></div>
+        <div class="schema-col-item"><span class="col-n">level</span><span class="col-t">'REQUEST'</span></div>
+      </div>
+    </div>
+  </div>
+
+  <pre><span class="cm"># Liaisons FK entre les 3 tableaux</span>
+T3.scenario_id ←── T2.scenario_id ←── T1.scenario_id     (FK → scénario parent)
+                    T2.step_baseline_key ←── T1.step_baseline_key  (FK → step parent)
+
+<span class="cm"># Liaisons vers les tables baseline PostgreSQL</span>
+T1.baseline_hash → baseline_statistics (level='REQUEST')
+T2.step_hash     → baseline_statistics (level='STEP')
+T3.scenario_id   → baseline_statistics (level='SCENARIO')</pre>
+</section>
+
+<!-- §7 BUFFER -->
+<section id="buffer">
+  <div class="sec-eyebrow">Section 07</div>
+  <h2>Buffer <span class="ac">Temporel</span></h2>
+  <p class="sec-lead">Le buffer <code>baseline_run_buffer</code> est la mémoire glissante du pipeline. Il stocke chaque valeur métrique brute avec son contexte d'exécution pour alimenter le recalcul des statistiques.</p>
+
+  <div class="schema-grid" style="grid-template-columns:1fr">
+    <div class="schema-box">
+      <div class="schema-head" style="background:var(--ink);color:var(--paper)"><span style="font-family:'IBM Plex Mono',monospace;font-size:12px">TABLE baseline_run_buffer</span></div>
+      <div class="schema-col-list">
+        <div class="schema-col-item"><span class="col-n">id <span class="chip pk">PK</span></span><span class="col-t">BIGSERIAL — auto-incrémenté</span></div>
+        <div class="schema-col-item"><span class="col-n">baseline_key</span><span class="col-t">VARCHAR(500) — clé entité (scénario/step/requête)</span></div>
+        <div class="schema-col-item"><span class="col-n">level</span><span class="col-t">SCENARIO | STEP | REQUEST</span></div>
+        <div class="schema-col-item"><span class="col-n">metric_type</span><span class="col-t">nom de la métrique (ex: scenario_ttfb_ms_mean)</span></div>
+        <div class="schema-col-item"><span class="col-n">run_id</span><span class="col-t">VARCHAR(200) — identifiant unique du run (ISO timestamp)</span></div>
+        <div class="schema-col-item"><span class="col-n">run_timestamp</span><span class="col-t">TIMESTAMPTZ — horodatage d'insertion</span></div>
+        <div class="schema-col-item"><span class="col-n">value</span><span class="col-t">DOUBLE PRECISION — valeur numérique de la métrique</span></div>
+        <div class="schema-col-item"><span class="col-n">is_incident</span><span class="col-t">BOOLEAN — TRUE si run labellisé comme incident</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Règle sain / incident — ségrégation par niveau</h3>
+  <div class="callout warn"><strong>Règle fondamentale :</strong> T1 (REQUEST) et T2 (STEP) n'insèrent dans leur baseline que les runs sains (<code>is_incident=FALSE</code>). T3 (SCENARIO) intègre tous les runs — la baseline scénario doit capturer le comportement complet, incidents inclus, pour XGBoost.</div>
+
+  <div class="schema-grid">
+    <div class="schema-box">
+      <div class="schema-head" style="background:#1e3a7a18;border-color:#1e3a7a33"><span class="chip t1">T1 REQUEST</span> healthy_only=True</div>
+      <div style="padding:12px 16px;font-size:13px;color:var(--muted)">Seuls les runs sains alimentent la baseline. Un incident ne pollue pas la latence de référence des requêtes — la winsorisation renforce cette protection.</div>
+    </div>
+    <div class="schema-box">
+      <div class="schema-head" style="background:#1a6b4a18;border-color:#1a6b4a33"><span class="chip t2">T2 STEP</span> healthy_only=True</div>
+      <div style="padding:12px 16px;font-size:13px;color:var(--muted)">Même règle pour les steps. La baseline de référence d'un step reste celle des bonnes exécutions uniquement.</div>
+    </div>
+    <div class="schema-box">
+      <div class="schema-head" style="background:#c8460a18;border-color:#c8460a33"><span class="chip t3">T3 SCENARIO</span> tous runs</div>
+      <div style="padding:12px 16px;font-size:13px;color:var(--muted)">La baseline scénario intègre sains et incidents — supervisée pour XGBoost, elle doit refléter la réalité opérationnelle complète.</div>
+    </div>
+  </div>
+
+  <h3>Trigger de recalcul — basé sur COUNT DISTINCT réel</h3>
+  <pre><span class="cm"># Compte les runs UNIQUES réellement insérés dans le buffer</span>
+<span class="cm"># plus fiable que run_count_total (peut compter des runs échoués avant insertion)</span>
+<span class="kw">SELECT</span> <span class="fn">COUNT</span>(<span class="kw">DISTINCT</span> run_id) <span class="kw">AS</span> buf_count
+<span class="kw">FROM</span> baseline_run_buffer
+<span class="kw">WHERE</span> baseline_key = <span class="st">%s</span> <span class="kw">AND</span> level = <span class="st">'SCENARIO'</span>
+
+do_short = (buf_count - last_short_update_run) >= <span class="nu">5</span>    <span class="cm"># WINDOW_SHORT</span>
+do_long  = (buf_count - last_long_update_run)  >= <span class="nu">100</span>   <span class="cm"># WINDOW_LONG</span></pre>
+</section>
+
+<!-- §8 FENÊTRES -->
+<section id="fenetres">
+  <div class="sec-eyebrow">Section 08</div>
+  <h2>Fenêtres <span class="ac">&amp; Recalcul</span></h2>
+  <p class="sec-lead">Deux horizons temporels coexistent : SHORT pour la réactivité immédiate, LONG pour la stabilité statistique. <strong>MIN_OBS = WINDOW_LONG = 100</strong> — une seule valeur de référence.</p>
+
+  <div class="window-diagram">
+    <div class="win-box">
+      <div class="win-title">WINDOW_SHORT</div>
+      <div class="win-num" style="color:var(--t2)">5</div>
+      <div class="win-desc">Recalcul rapide pour détecter les pics immédiats. Active <code>mean_short</code> dès les 5 premières exécutions — même avant la baseline complète.</div>
+      <div class="win-trigger">Déclenché toutes les 5 nouvelles lignes distinctes dans le buffer</div>
+    </div>
+    <div class="win-box">
+      <div class="win-title">WINDOW_LONG = MIN_OBS</div>
+      <div class="win-num" style="color:var(--t3)">100</div>
+      <div class="win-desc">Recalcul complet = seuil de validité. Déclenche aussi le snapshot historique et la décroissance de criticité. Une baseline est fiable à ≥100 observations.</div>
+      <div class="win-trigger">Déclenché toutes les 100 nouvelles lignes distinctes dans le buffer</div>
+    </div>
+  </div>
+
+  <h3>3 états de maturité d'une baseline</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>État</th><th>Seuil obs</th><th>status_encoded</th><th>baseline_source</th><th>Comportement</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Cold Start</strong></td><td class="mono">&lt; 5</td><td><span class="chip" style="background:#c8460a18;color:var(--t3);border:1px solid #c8460a33">0</span></td><td class="mono">fallback:key ou none</td><td>Cherche le donneur le plus similaire ayant ≥100 obs. Si aucun : z-scores = 0.</td></tr>
+      <tr><td><strong>Partial</strong></td><td class="mono">5 – 99</td><td><span class="chip" style="background:#b5860d18;color:var(--gold);border:1px solid #b5860d33">1</span></td><td class="mono">partial:N</td><td>Utilise ses propres stats partielles. confidence_score &lt; 1.0. Pas de fallback donneur.</td></tr>
+      <tr><td><strong>Complète</strong></td><td class="mono">≥ 100</td><td><span class="chip" style="background:#1a6b4a18;color:var(--t2);border:1px solid #1a6b4a33">2</span></td><td class="mono">own</td><td>baseline_is_valid=1. Cache fallback supprimé définitivement. Baseline stable et fiable.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Winsorisation IQR — protection outliers avant calcul (T1/T2 uniquement)</h3>
+  <div class="formula">
+    <span class="fl">Winsorisation k=3.0 — préserve ~99.7% des valeurs d'une distribution normale</span>
+    lo = Q1 − <span class="fv">3 × IQR</span>   ·   hi = Q3 + <span class="fv">3 × IQR</span><br>
+    valeur_winsorisée = <span class="fv2">clip(valeur, lo, hi)</span><br>
+    <span style="color:#4a5568;font-size:11px">Appliquée sur les valeurs du buffer avant _stats() → protège mean et std contre les pics incidents</span>
+  </div>
+
+  <h3>Statistiques calculées — baseline_statistics</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Colonne DB</th><th>Description</th><th>Usage enrichissement</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">mean</td><td>Moyenne (après winsorisation T1/T2)</td><td>z_score_*</td></tr>
+      <tr><td class="mono">std</td><td>Écart-type (ddof=1)</td><td>z_score_*</td></tr>
+      <tr><td class="mono">median</td><td>Médiane P50 — robuste aux outliers</td><td>robust_z_*</td></tr>
+      <tr><td class="mono">robust_std</td><td>IQR × 0.7413 — estimateur robuste de σ</td><td>robust_z_*</td></tr>
+      <tr><td class="mono">mad</td><td>Median Absolute Deviation — σ ultra-robuste</td><td>diagnostic</td></tr>
+      <tr><td class="mono">p95</td><td>Percentile 95 de la distribution historique</td><td>exceeds_p95_*</td></tr>
+      <tr><td class="mono">iqr</td><td>Interquartile range (P75 − P25)</td><td>winsorisation</td></tr>
+      <tr><td class="mono">confidence_score</td><td>min(1.0, n / 30.0) — maturité baseline</td><td>pondération ML</td></tr>
+      <tr><td class="mono">count</td><td>Nombre d'observations ayant servi au calcul</td><td>_min_obs(), seuil</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- §9 TABLES DB -->
+<section id="tables-db">
+  <div class="sec-eyebrow">Section 09</div>
+  <h2>Tables <span class="ac">PostgreSQL</span></h2>
+  <p class="sec-lead">5 tables forment le système de baseline. Chaque table a un rôle distinct dans le cycle de vie des statistiques, de la criticité et du fallback cold start.</p>
+
+  <div class="schema-grid">
+    <div class="schema-box">
+      <div class="schema-head" style="background:#7b2d8b18;border-color:#7b2d8b33"><span class="chip bl">baseline_statistics</span></div>
+      <div style="padding:8px 16px;font-size:12px;color:var(--muted)">Statistiques calculées — 1 ligne par (entité, level, métrique)</div>
+      <div class="schema-col-list">
+        <div class="schema-col-item"><span class="col-n">baseline_key, level, metric_type <span class="chip pk">PK</span></span><span class="col-t"></span></div>
+        <div class="schema-col-item"><span class="col-n">mean, std</span><span class="col-t">stats classiques</span></div>
+        <div class="schema-col-item"><span class="col-n">robust_std, mad</span><span class="col-t">stats robustes IQR</span></div>
+        <div class="schema-col-item"><span class="col-n">median, p95, iqr</span><span class="col-t">percentiles</span></div>
+        <div class="schema-col-item"><span class="col-n">count</span><span class="col-t">nb observations</span></div>
+        <div class="schema-col-item"><span class="col-n">confidence_score</span><span class="col-t">min(1.0, count/30)</span></div>
+      </div>
+    </div>
+    <div class="schema-box">
+      <div class="schema-head" style="background:#1e3a7a18;border-color:#1e3a7a33"><span class="chip t1">baseline_metadata</span></div>
+      <div style="padding:8px 16px;font-size:12px;color:var(--muted)">Cycle de vie, criticité, compteurs — 1 ligne par entité</div>
+      <div class="schema-col-list">
+        <div class="schema-col-item"><span class="col-n">baseline_key, level <span class="chip pk">PK</span></span><span class="col-t"></span></div>
+        <div class="schema-col-item"><span class="col-n">scenario_id</span><span class="col-t">FK scénario parent</span></div>
+        <div class="schema-col-item"><span class="col-n">request_category</span><span class="col-t">XHR/JS/CSS/img…</span></div>
+        <div class="schema-col-item"><span class="col-n">is_api, is_third_party</span><span class="col-t">flags pour similarité fallback</span></div>
+        <div class="schema-col-item"><span class="col-n">criticality_default</span><span class="col-t">valeur initiale (0.5/0.7/0.9)</span></div>
+        <div class="schema-col-item"><span class="col-n">criticality_current</span><span class="col-t">valeur active (bump/decay)</span></div>
+        <div class="schema-col-item"><span class="col-n">run_count_total</span><span class="col-t">nb runs traités total</span></div>
+        <div class="schema-col-item"><span class="col-n">last_short/long_update_run</span><span class="col-t">buf_count au dernier recalcul</span></div>
+        <div class="schema-col-item"><span class="col-n">incident_occurrences</span><span class="col-t">nb incidents enregistrés</span></div>
+      </div>
+    </div>
+    <div class="schema-box">
+      <div class="schema-head" style="background:#1a6b4a18;border-color:#1a6b4a33"><span class="chip t2">baseline_run_buffer</span></div>
+      <div style="padding:8px 16px;font-size:12px;color:var(--muted)">Fenêtre glissante valeurs brutes — purgé à WINDOW_LONG max</div>
+      <div class="schema-col-list">
+        <div class="schema-col-item"><span class="col-n">id <span class="chip pk">PK</span></span><span class="col-t">BIGSERIAL</span></div>
+        <div class="schema-col-item"><span class="col-n">baseline_key, level, metric_type</span><span class="col-t">entité + métrique</span></div>
+        <div class="schema-col-item"><span class="col-n">run_id</span><span class="col-t">id unique run</span></div>
+        <div class="schema-col-item"><span class="col-n">value</span><span class="col-t">DOUBLE PRECISION</span></div>
+        <div class="schema-col-item"><span class="col-n">is_incident</span><span class="col-t">BOOLEAN sain/incident</span></div>
+      </div>
+    </div>
+    <div class="schema-box">
+      <div class="schema-head" style="background:#c8460a18;border-color:#c8460a33"><span class="chip t3">baseline_history</span></div>
+      <div style="padding:8px 16px;font-size:12px;color:var(--muted)">Archive quotidienne — snapshot auto à chaque recalcul LONG</div>
+      <div class="schema-col-list">
+        <div class="schema-col-item"><span class="col-n">history_id <span class="chip pk">PK</span></span><span class="col-t">BIGSERIAL</span></div>
+        <div class="schema-col-item"><span class="col-n">baseline_key, level, metric_type</span><span class="col-t"></span></div>
+        <div class="schema-col-item"><span class="col-n">snapshot_date</span><span class="col-t">DATE — 1 snapshot/jour max</span></div>
+        <div class="schema-col-item"><span class="col-n">mean, std, median, p95, iqr, count</span><span class="col-t">stats archivées</span></div>
+      </div>
+    </div>
+    <div class="schema-box">
+      <div class="schema-head" style="background:#b5860d18;border-color:#b5860d33"><span class="chip" style="background:#b5860d18;color:var(--gold);border:1px solid #b5860d44">baseline_fallback_cache</span></div>
+      <div style="padding:8px 16px;font-size:12px;color:var(--muted)">Cache donneur cold start — supprimé quand entité atteint MIN_OBS=100</div>
+      <div class="schema-col-list">
+        <div class="schema-col-item"><span class="col-n">baseline_key, level <span class="chip pk">PK</span></span><span class="col-t">entité en cold start</span></div>
+        <div class="schema-col-item"><span class="col-n">donor_key</span><span class="col-t">clé du donneur choisi</span></div>
+        <div class="schema-col-item"><span class="col-n">similarity</span><span class="col-t">SMALLINT score 0–13</span></div>
+        <div class="schema-col-item"><span class="col-n">donor_obs</span><span class="col-t">nb obs donneur au moment du choix</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- §10 FALLBACK -->
+<section id="fallback">
+  <div class="sec-eyebrow">Section 10</div>
+  <h2>Fallback <span class="ac">&amp; Similarité</span></h2>
+  <p class="sec-lead">Quand une entité a moins de 5 observations, le pipeline cherche le donneur le plus similaire parmi ceux ayant ≥100 observations. Un donneur partiel ne peut jamais servir de référence.</p>
+
+  <h3>Score de similarité — maximum 13 points</h3>
+  <div style="background:var(--paper2);border:1px solid var(--border);border-radius:6px;padding:20px 24px;margin:16px 0">
+    <div class="sim-item"><div class="sim-name">request_category (même type)</div><div class="sim-bar-wrap"><div class="sim-bar-fill" style="width:100%;background:var(--bl)"></div></div><div class="sim-pts" style="color:var(--bl)">+5</div><div style="font-size:12px;color:var(--muted);margin-left:8px">Distributions quasi-identiques</div></div>
+    <div class="sim-item"><div class="sim-name">is_api (API vs statique)</div><div class="sim-bar-wrap"><div class="sim-bar-fill" style="width:60%;background:var(--t1)"></div></div><div class="sim-pts" style="color:var(--t1)">+3</div><div style="font-size:12px;color:var(--muted);margin-left:8px">Latences fondamentalement différentes</div></div>
+    <div class="sim-item"><div class="sim-name">is_third_party (domaine tiers)</div><div class="sim-bar-wrap"><div class="sim-bar-fill" style="width:40%;background:var(--t2)"></div></div><div class="sim-pts" style="color:var(--t2)">+2</div><div style="font-size:12px;color:var(--muted);margin-left:8px">Réseau externe non contrôlé</div></div>
+    <div class="sim-item"><div class="sim-name">same_scenario (même scénario)</div><div class="sim-bar-wrap"><div class="sim-bar-fill" style="width:40%;background:var(--t3)"></div></div><div class="sim-pts" style="color:var(--t3)">+2</div><div style="font-size:12px;color:var(--muted);margin-left:8px">Même contexte navigateur</div></div>
+    <div class="sim-item"><div class="sim-name">step_proximity (position step)</div><div class="sim-bar-wrap"><div class="sim-bar-fill" style="width:20%;background:var(--muted)"></div></div><div class="sim-pts" style="color:var(--muted)">+1</div><div style="font-size:12px;color:var(--muted);margin-left:8px">Position dans le waterfall</div></div>
+  </div>
+
+  <div class="callout warn"><strong>Condition stricte :</strong> Un donneur n'est éligible que s'il a lui-même atteint <strong>MIN_OBS = 100 observations</strong>. Une baseline partielle (5–99 obs) ou un autre cold start ne peut jamais être donneur — seules les baselines complètes et stables sont autorisées (<code>s.count &gt;= self.min_obs</code>).</div>
+
+  <h3>Graduation automatique — sortie du cold start</h3>
+  <pre><span class="cm"># Après chaque recalcul LONG : supprimer du cache fallback les entités</span>
+<span class="cm"># qui ont atteint MIN_OBS dans baseline_statistics (elles utiliseront</span>
+<span class="cm"># leur propre baseline dès le prochain run)</span>
+<span class="kw">DELETE FROM</span> baseline_fallback_cache fc
+<span class="kw">WHERE EXISTS</span> (
+    <span class="kw">SELECT</span> <span class="nu">1</span> <span class="kw">FROM</span> baseline_statistics s
+    <span class="kw">WHERE</span> s.baseline_key = fc.baseline_key
+      <span class="kw">AND</span> s.level        = fc.level
+      <span class="kw">AND</span> s.count >= <span class="nu">100</span>   <span class="cm">-- MIN_OBS</span>
+)</pre>
+</section>
+
+<!-- §11 Z-SCORES -->
+<section id="zscore">
+  <div class="sec-eyebrow">Section 11</div>
+  <h2>Z-Scores <span class="ac">&amp; Enrichissement</span></h2>
+  <p class="sec-lead">Chaque tableau est enrichi en comparant les valeurs du run courant à la baseline. Deux z-scores simultanés par métrique : classique (sensible aux pics) et robuste (résistant aux outliers).</p>
+
+  <div class="window-diagram">
+    <div class="win-box">
+      <div class="win-title">Z-Score Classique</div>
+      <div class="formula" style="margin:8px 0">
+        <span class="fl">Formule</span>z = (val − <span class="fv">mean</span>) / <span class="fv">std</span>
+      </div>
+      <div class="win-desc">Basé sur la moyenne et l'écart-type. Sensible aux outliers — un seul incident peut gonfler mean/std et réduire la détectabilité future. Winsorisation du buffer atténue ce problème.</div>
+    </div>
+    <div class="win-box">
+      <div class="win-title">Robust Z-Score <span class="chip new">v4</span></div>
+      <div class="formula" style="margin:8px 0">
+        <span class="fl">Formule robuste</span>robust_z = (val − <span class="fv2">median</span>) / <span class="fv2">robust_std</span>
+      </div>
+      <div class="win-desc">Basé sur la médiane et <code>IQR × 0.7413</code>. Insensible aux outliers. Détecte les anomalies dans les distributions asymétriques — typique des latences réseau avec queues longues.</div>
+    </div>
+  </div>
+
+  <div class="formula">
+    <span class="fl">Score d'anomalie agrégé — par niveau</span>
+    z_eff(m) = max( |z_score(m)|, |robust_z(m)| )   <span style="color:#4a5568">← prend le pire des 2</span><br>
+    <span class="fv">anomaly_score</span> = moyenne des z_eff sur les métriques clés du niveau<br><br>
+    <span class="fl">Seuils d'alerte</span>
+    is_anomaly_warn  = 1  si  anomaly_score ≥ <span class="fv">2.0</span>  (Z_WARN — déviation notable)<br>
+    is_anomaly_alert = 1  si  anomaly_score ≥ <span class="fv">3.0</span>  (Z_ALERT — anomalie franche)
+  </div>
+
+  <h3>Métriques clés par niveau (pour le score anomalie)</h3>
+  <div class="schema-grid">
+    <div class="schema-box">
+      <div class="schema-head" style="background:#c8460a18;border-color:#c8460a33"><span class="chip t3">_KEY_SCEN</span></div>
+      <div class="schema-col-list">
+        <div class="schema-col-item"><span class="col-n">scenario_ttfb_ms_mean</span><span class="col-t">latence globale</span></div>
+        <div class="schema-col-item"><span class="col-n">scenario_failure_rate_pct</span><span class="col-t">taux d'échec</span></div>
+        <div class="schema-col-item"><span class="col-n">scenario_duration_sec</span><span class="col-t">durée totale</span></div>
+        <div class="schema-col-item"><span class="col-n">req_time_cv</span><span class="col-t">variabilité</span></div>
+        <div class="schema-col-item"><span class="col-n">timeout_cascade_score</span><span class="col-t">cascades timeout</span></div>
+      </div>
+    </div>
+    <div class="schema-box">
+      <div class="schema-head" style="background:#1a6b4a18;border-color:#1a6b4a33"><span class="chip t2">_KEY_STEP</span></div>
+      <div class="schema-col-list">
+        <div class="schema-col-item"><span class="col-n">step_ttfb_mean_ms</span><span class="col-t">TTFB step</span></div>
+        <div class="schema-col-item"><span class="col-n">step_failure_rate_pct</span><span class="col-t">erreurs step</span></div>
+        <div class="schema-col-item"><span class="col-n">step_time_mean_ms</span><span class="col-t">temps step</span></div>
+        <div class="schema-col-item"><span class="col-n">step_api_error_rate</span><span class="col-t">erreurs API</span></div>
+        <div class="schema-col-item"><span class="col-n">step_cumulative_failure_rate</span><span class="col-t">cumulatif</span></div>
+      </div>
+    </div>
+    <div class="schema-box">
+      <div class="schema-head" style="background:#1e3a7a18;border-color:#1e3a7a33"><span class="chip t1">_KEY_REQ</span></div>
+      <div class="schema-col-list">
+        <div class="schema-col-item"><span class="col-n">timing_wait_ms_clean</span><span class="col-t">TTFB requête</span></div>
+        <div class="schema-col-item"><span class="col-n">timing_total_ms</span><span class="col-t">temps total</span></div>
+        <div class="schema-col-item"><span class="col-n">response_body_size</span><span class="col-t">taille réponse</span></div>
+        <div class="schema-col-item"><span class="col-n">timing_blocked_ms_clean</span><span class="col-t">file d'attente</span></div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Features générées par _enrich() pour chaque métrique</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Feature</th><th>Formule / Description</th><th>Niveaux</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">z_score_{prefix}{m}</td><td>(val − mean) / std</td><td>T1, T2, T3</td></tr>
+      <tr><td class="mono">robust_z_{prefix}{m}</td><td>(val − median) / robust_std — résistant aux outliers</td><td>T1, T2, T3</td></tr>
+      <tr><td class="mono">deviation_pct_{prefix}{m}</td><td>(val − mean) / mean × 100 — déviation en %</td><td>T1, T2, T3</td></tr>
+      <tr><td class="mono">exceeds_p95_{prefix}{m}</td><td>1 si val &gt; p95 historique</td><td>T1, T2, T3</td></tr>
+      <tr><td class="mono">mean_short_{prefix}{m}</td><td>Moy. glissante 5 derniers runs du buffer</td><td>T1, T2, T3</td></tr>
+      <tr><td class="mono">mean_long_{prefix}{m}</td><td>Moy. glissante 100 derniers runs du buffer</td><td>T1, T2, T3</td></tr>
+      <tr><td class="mono">ratio_short_long_{prefix}{m}</td><td>mean_short / mean_long — tendance récente vs long terme</td><td>T1, T2, T3</td></tr>
+      <tr><td class="mono">anomaly_score_{level}</td><td>max(|z|, |robust_z|) moyenné sur métriques clés</td><td>T1, T2, T3</td></tr>
+      <tr><td class="mono">baseline_is_valid</td><td>1 si own (≥100 obs), 0 sinon</td><td>T1, T2, T3</td></tr>
+      <tr><td class="mono">baseline_is_fallback</td><td>1 si source est un donneur (cold start)</td><td>T1, T2, T3</td></tr>
+      <tr><td class="mono">baseline_status_encoded</td><td>0=cold, 1=partial, 2=complet — calculé depuis DB</td><td>T3</td></tr>
+      <tr><td class="mono">cold_start_weight</td><td>0.0 / 0.5 / 1.0 selon maturité — calculé depuis DB</td><td>T3</td></tr>
+      <tr><td class="mono">baseline_runs_in_buffer</td><td>COUNT(DISTINCT run_id) réel — source de vérité</td><td>T3</td></tr>
+      <tr><td class="mono">baseline_source</td><td>'own' | 'partial:N' | 'fallback:key' | 'none'</td><td>T1, T2, T3</td></tr>
+      <tr><td class="mono">baseline_effective_key_{level}</td><td>Clé baseline réellement utilisée (propre ou donneur)</td><td>T1, T2, T3</td></tr>
+      <tr><td class="mono">baseline_nb_obs_{level}</td><td>Nb observations de la baseline active</td><td>T1, T2, T3</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout info"><strong>Enrichissement multi-niveaux T1 :</strong> chaque ligne T1 reçoit des z-scores à 3 niveaux indépendants — baseline REQUEST propre, baseline STEP parent, baseline SCENARIO. Chaque niveau peut être <em>own</em>, <em>partial</em>, <em>fallback</em> ou <em>none</em> indépendamment. La tracabilité est complète via <code>baseline_source_step</code>, <code>baseline_source_scenario</code>, <code>baseline_effective_key_*</code>.</div>
+</section>
+
+<!-- §12 CRITICITÉ -->
+<section id="criticite">
+  <div class="sec-eyebrow">Section 12</div>
+  <h2>Gestion de la <span class="ac">Criticité</span></h2>
+  <p class="sec-lead">Chaque entité possède une criticité dynamique reflétant son historique d'incidents. Elle augmente sur chaque incident (+0.1) et décroît progressivement vers son défaut (−0.01 par période LONG sans incident).</p>
+
+  <div class="stats-row">
+    <div class="stat-box"><span class="stat-n" style="color:var(--t3)">0.9</span><span class="stat-l">SCENARIO<br>criticality_default</span></div>
+    <div class="stat-box"><span class="stat-n" style="color:var(--t2)">0.7</span><span class="stat-l">STEP<br>criticality_default</span></div>
+    <div class="stat-box"><span class="stat-n" style="color:var(--t1)">0.5</span><span class="stat-l">REQUEST<br>criticality_default</span></div>
+    <div class="stat-box"><span class="stat-n" style="color:var(--ink)">1.0</span><span class="stat-l">Maximum<br>plafond absolu</span></div>
+  </div>
+
+  <h3>Bump — lors de chaque run incident</h3>
+  <pre><span class="cm"># Appelé dans update() pour CHAQUE run labellisé is_incident=True</span>
+<span class="cm"># 1. Bump le SCÉNARIO (plafond = 1.0)</span>
+<span class="kw">UPDATE</span> baseline_metadata
+<span class="kw">SET</span> criticality_current = <span class="fn">LEAST</span>(<span class="nu">1.0</span>, criticality_current + <span class="nu">0.1</span>),
+    incident_occurrences = incident_occurrences + <span class="nu">1</span>,
+    last_updated = <span class="fn">NOW</span>()
+<span class="kw">WHERE</span> baseline_key = scenario_id <span class="kw">AND</span> level = <span class="st">'SCENARIO'</span>
+
+<span class="cm"># 2. Bump chaque STEP impliqué (loop sur t2)</span>
+<span class="kw">FOR</span> step <span class="kw">IN</span> t2:
+    <span class="kw">UPDATE</span> baseline_metadata
+    <span class="kw">SET</span> criticality_current = <span class="fn">LEAST</span>(<span class="nu">1.0</span>, criticality_current + <span class="nu">0.1</span>),
+        incident_occurrences = incident_occurrences + <span class="nu">1</span>
+    <span class="kw">WHERE</span> baseline_key = step_hashed_key(scenario_id, step.index) <span class="kw">AND</span> level = <span class="st">'STEP'</span>
+
+<span class="cm"># 3. Bump chaque REQUEST unique (dédupliquées par baseline_hash)</span>
+<span class="kw">FOR</span> req <span class="kw">IN</span> deduplicated(t1, key=<span class="st">'baseline_hash'</span>):
+    <span class="kw">UPDATE</span> baseline_metadata
+    <span class="kw">SET</span> criticality_current = <span class="fn">LEAST</span>(<span class="nu">1.0</span>, criticality_current + <span class="nu">0.1</span>),
+        incident_occurrences = incident_occurrences + <span class="nu">1</span>
+    <span class="kw">WHERE</span> baseline_key = req.baseline_hash <span class="kw">AND</span> level = <span class="st">'REQUEST'</span></pre>
+
+  <h3>Decay — à chaque recalcul LONG sans incident</h3>
+  <pre><span class="cm"># Déclenché dans update() à chaque recalcul LONG (100 runs) si run non-incident</span>
+<span class="cm"># Toutes les entités du scénario redescendent vers leur défaut</span>
+<span class="kw">UPDATE</span> baseline_metadata
+<span class="kw">SET</span> criticality_current = <span class="fn">GREATEST</span>(
+    criticality_default,           <span class="cm">← plancher = jamais en dessous du défaut initial</span>
+    criticality_current - <span class="nu">0.01</span>    <span class="cm">← -1% par période LONG (= 100 runs)</span>
+),
+last_updated = <span class="fn">NOW</span>()
+<span class="kw">WHERE</span> scenario_id = %s
+  <span class="kw">AND</span> criticality_current > criticality_default
+
+<span class="cm"># Cron quotidien : decay_criticality(decay_rate=0.01) garantit la décroissance</span>
+<span class="cm"># même si le pipeline ne tourne pas assez fréquemment</span></pre>
+
+  <h3>Évolution temporelle typique — scénario à 0.9 défaut</h3>
+  <div class="decay-bar"></div>
+  <div class="decay-marks"><span>0.0</span><span>0.5 défaut REQ</span><span>0.7 défaut STEP</span><span>0.9 défaut SCEN</span><span>1.0 max</span></div>
+
+  <div class="tbl-wrap" style="margin-top:20px"><table>
+    <thead><tr><th>Événement</th><th>Effet SCENARIO</th><th>Effet STEP</th><th>Effet REQUEST</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Création entité</strong></td><td class="mono">= 0.9 (défaut)</td><td class="mono">= 0.7 (défaut)</td><td class="mono">= 0.5 (défaut)</td></tr>
+      <tr><td><strong>1 run incident</strong></td><td class="mono">0.9 → 1.0 (plafond)</td><td class="mono">0.7 → 0.8</td><td class="mono">0.5 → 0.6</td></tr>
+      <tr><td><strong>100 runs sains</strong> (1 période LONG)</td><td class="mono">1.0 → 0.99</td><td class="mono">0.8 → 0.79</td><td class="mono">0.6 → 0.59</td></tr>
+      <tr><td><strong>~1000 runs sains</strong> sans incident</td><td class="mono">→ 0.9 (défaut)</td><td class="mono">→ 0.7 (défaut)</td><td class="mono">→ 0.5 (défaut)</td></tr>
+      <tr><td><strong>Cron quotidien</strong></td><td colspan="3" style="color:var(--muted);font-size:12px">decay_criticality(decay_rate=0.01) — complément si pipeline peu fréquent</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="callout"><strong>Double déclenchement decay :</strong> la décroissance est appelée <em>dans le pipeline</em> (recalcul LONG sans incident) <em>et</em> par le cron quotidien. Si le pipeline tourne toutes les 5 min, le cron est redondant. Si le pipeline est arrêté plusieurs jours, le cron assure la décroissance quand même — les deux mécanismes se protègent mutuellement.</div>
+</section>
+
+</main>
+
+<script>
+const sections = document.querySelectorAll('section[id]');
+const links    = document.querySelectorAll('.nav-item');
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const a = document.querySelector(`.nav-item[href="#${e.target.id}"]`);
+      if (a) a.classList.add('active');
+    }
+  });
+}, { rootMargin: '-30% 0px -65% 0px' });
+sections.forEach(s => io.observe(s));
+</script>
+</body>
+</html>

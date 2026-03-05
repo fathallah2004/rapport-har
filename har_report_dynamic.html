@@ -1,692 +1,1557 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>HAR Feature Report</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;600;700&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg: #0a0b0d; --bg2: #0f1115; --bg3: #141720; --bg4: #1a1f2e;
-  --border: #1e2535; --border2: #252d40;
-  --amber: #f59e0b; --amber2: #fbbf24; --amber3: #fcd34d;
-  --cyan: #22d3ee; --green: #10b981; --red: #ef4444;
-  --orange: #f97316; --purple: #a78bfa; --blue: #3b82f6;
-  --text: #e2e8f0; --muted: #475569; --dim: #64748b;
-  --mono: 'JetBrains Mono', monospace; --sans: 'Space Grotesk', sans-serif;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 13px; min-height: 100vh; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>HAR Feature Report</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0b0d;
+      --bg2: #0f1115;
+      --bg3: #141720;
+      --bg4: #1a1f2e;
+      --border: #1e2535;
+      --border2: #252d40;
+      --amber: #f59e0b;
+      --amber2: #fbbf24;
+      --amber3: #fcd34d;
+      --cyan: #22d3ee;
+      --green: #10b981;
+      --red: #ef4444;
+      --orange: #f97316;
+      --purple: #a78bfa;
+      --blue: #3b82f6;
+      --text: #e2e8f0;
+      --muted: #475569;
+      --dim: #64748b;
+      --mono: 'JetBrains Mono', monospace;
+      --sans: 'Space Grotesk', sans-serif;
+    }
 
-/* ── TOPBAR ── */
-.topbar {
-  position: sticky; top: 0; z-index: 100;
-  background: rgba(10,11,13,0.96); backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--border2);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 24px; height: 52px; gap: 16px;
-}
-.topbar-brand { display: flex; align-items: center; gap: 10px; }
-.brand-icon {
-  width: 30px; height: 30px; background: var(--amber);
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 13px; color: #000; border-radius: 4px;
-  font-family: var(--mono); letter-spacing: -1px;
-}
-.brand-name { font-weight: 600; font-size: 14px; letter-spacing: 0.5px; }
-.brand-name span { color: var(--amber); }
-.topbar-nav { display: flex; gap: 2px; }
-.nav-btn {
-  padding: 6px 14px; border-radius: 5px; cursor: pointer; font-size: 11px;
-  font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;
-  color: var(--dim); border: 1px solid transparent; transition: all .15s;
-  font-family: var(--sans); background: none;
-}
-.nav-btn:hover { color: var(--text); background: var(--bg4); }
-.nav-btn.active { color: var(--amber); background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.25); }
-.topbar-right { display: flex; align-items: center; gap: 10px; }
-.topbar-status {
-  display: flex; align-items: center; gap: 8px;
-  padding: 5px 12px; border-radius: 20px;
-  border: 1px solid var(--border2); font-size: 11px; font-weight: 600;
-  font-family: var(--mono);
-}
-.status-dot { width: 7px; height: 7px; border-radius: 50%; animation: pulse 2s infinite; }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-/* File selector */
-.file-sel {
-  display: flex; align-items: center; gap: 6px;
-  background: var(--bg3); border: 1px solid var(--border2); border-radius: 6px;
-  padding: 4px 4px 4px 10px; font-size: 10px; font-family: var(--mono);
-}
-.file-sel label { color: var(--muted); white-space: nowrap; font-size: 9px; letter-spacing: 1px; text-transform: uppercase; }
-.file-sel select {
-  background: transparent; border: none; color: var(--text); font-family: var(--mono);
-  font-size: 11px; outline: none; cursor: pointer; max-width: 220px;
-}
-.file-sel select option { background: var(--bg3); }
-.file-sel button {
-  background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.25);
-  border-radius: 4px; color: var(--amber); font-size: 10px; font-weight: 700;
-  padding: 3px 8px; cursor: pointer; font-family: var(--mono); transition: all .15s;
-}
-.file-sel button:hover { background: rgba(245,158,11,.25); }
+    html {
+      scroll-behavior: smooth;
+    }
 
-/* ── SPLASH ── */
-#splash {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 85vh; gap: 18px; text-align: center; padding: 32px;
-}
-.splash-ico { font-size: 52px; }
-.splash-title { font-size: 22px; font-weight: 600; }
-.splash-sub { font-size: 13px; color: var(--dim); max-width: 500px; line-height: 1.8; }
-.splash-code {
-  background: var(--bg3); border: 1px solid var(--border2); border-radius: 8px;
-  padding: 16px 28px; font-family: var(--mono); font-size: 12px; color: var(--amber);
-  line-height: 2; text-align: left;
-}
-#loading {
-  display: none; flex-direction: column; align-items: center; justify-content: center;
-  min-height: 70vh; gap: 16px;
-}
-.spinner {
-  width: 36px; height: 36px; border: 3px solid var(--border2);
-  border-top-color: var(--amber); border-radius: 50%; animation: spin .7s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 13px;
+      min-height: 100vh;
+    }
 
-/* ── LAYOUT ── */
-.main { padding: 24px; max-width: 1600px; margin: 0 auto; display: none; }
-.pane { display: none; }
-.pane.active { display: block; animation: fadeIn .2s ease; }
-@keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+    /* ── TOPBAR ── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(10, 11, 13, 0.96);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      height: 52px;
+      gap: 16px;
+    }
 
-/* ── SECTION HEADER ── */
-.sh {
-  font-size: 9px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
-  color: var(--muted); margin: 28px 0 14px;
-  display: flex; align-items: center; gap: 10px;
-}
-.sh::after { content:''; flex:1; height:1px; background: var(--border); }
-.sh:first-child { margin-top: 0; }
+    .topbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-/* ── GRID UTILS ── */
-.g { display: grid; gap: 14px; margin-bottom: 14px; }
-.g-4 { grid-template-columns: repeat(4, 1fr); }
-.g-3 { grid-template-columns: repeat(3, 1fr); }
-.g-2 { grid-template-columns: repeat(2, 1fr); }
-.g-1-2 { grid-template-columns: 1fr 2fr; }
-.g-2-1 { grid-template-columns: 2fr 1fr; }
-@media(max-width:1200px) { .g-4{grid-template-columns:repeat(2,1fr)} .g-3{grid-template-columns:1fr 1fr} }
-@media(max-width:700px) { .g-4,.g-3,.g-2,.g-1-2,.g-2-1{grid-template-columns:1fr} .main{padding:12px} }
+    .brand-icon {
+      width: 30px;
+      height: 30px;
+      background: var(--amber);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      color: #000;
+      border-radius: 4px;
+      font-family: var(--mono);
+      letter-spacing: -1px;
+    }
 
-/* ── CARD ── */
-.card {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 18px; position: relative; overflow: hidden;
-}
-.card-accent { border-top: 2px solid var(--amber); }
-.card-red { border-top: 2px solid var(--red); }
-.card-green { border-top: 2px solid var(--green); }
-.card-cyan { border-top: 2px solid var(--cyan); }
-.card-purple { border-top: 2px solid var(--purple); }
+    .brand-name {
+      font-weight: 600;
+      font-size: 14px;
+      letter-spacing: 0.5px;
+    }
 
-/* ── KPI ── */
-.kpi-label { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 6px; }
-.kpi-value { font-family: var(--mono); font-size: 26px; font-weight: 700; line-height: 1; }
-.kpi-sub { font-size: 10px; color: var(--dim); margin-top: 5px; font-family: var(--mono); }
-.kv-amber { color: var(--amber); }
-.kv-green { color: var(--green); }
-.kv-red { color: var(--red); }
-.kv-cyan { color: var(--cyan); }
-.kv-purple { color: var(--purple); }
-.kv-orange { color: var(--orange); }
+    .brand-name span {
+      color: var(--amber);
+    }
 
-/* ── INLINE BAR LIST ── */
-.blist { display: flex; flex-direction: column; gap: 8px; }
-.brow { display: grid; grid-template-columns: 190px 1fr 80px; gap: 8px; align-items: center; }
-.blabel { font-size: 10px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--mono); }
-.btrack { height: 5px; background: var(--bg4); border-radius: 3px; overflow: hidden; }
-.bfill { height: 100%; border-radius: 3px; transition: width .5s ease; }
-.bnum { font-size: 10px; font-family: var(--mono); font-weight: 600; text-align: right; color: var(--text); }
+    .topbar-nav {
+      display: flex;
+      gap: 2px;
+    }
 
-/* ── DONUT ── */
-.donut-wrap { display: flex; align-items: center; gap: 20px; }
-.donut-svg-wrap { position: relative; flex-shrink: 0; }
-svg.donut { transform: rotate(-90deg); display: block; }
-.donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
-.donut-val { font-family: var(--mono); font-size: 18px; font-weight: 700; }
-.donut-sub { font-size: 8px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
-.donut-legend { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.dl-row { display: flex; align-items: center; gap: 7px; }
-.dl-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
-.dl-name { font-size: 10px; color: var(--dim); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dl-val { font-size: 10px; font-family: var(--mono); font-weight: 600; }
+    .nav-btn {
+      padding: 6px 14px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--dim);
+      border: 1px solid transparent;
+      transition: all .15s;
+      font-family: var(--sans);
+      background: none;
+    }
 
-/* ── PILLS ── */
-.pill { display: inline-block; padding: 1px 7px; border-radius: 3px; font-size: 9px; font-family: var(--mono); font-weight: 700; }
-.p2xx { background: rgba(16,185,129,.15); color: var(--green); }
-.p3xx { background: rgba(251,191,36,.12); color: var(--amber2); }
-.p4xx { background: rgba(249,115,22,.15); color: var(--orange); }
-.p5xx { background: rgba(239,68,68,.15); color: var(--red); }
-.p0xx { background: rgba(167,139,250,.15); color: var(--purple); }
-.t-doc { background: rgba(34,211,238,.12); color: var(--cyan); }
-.t-js { background: rgba(251,191,36,.12); color: var(--amber2); }
-.t-css { background: rgba(167,139,250,.12); color: var(--purple); }
-.t-img { background: rgba(239,68,68,.12); color: #f87171; }
-.t-fetch { background: rgba(16,185,129,.12); color: var(--green); }
-.t-font { background: rgba(59,130,246,.12); color: var(--blue); }
-.t-other { background: rgba(100,116,139,.12); color: var(--dim); }
+    .nav-btn:hover {
+      color: var(--text);
+      background: var(--bg4);
+    }
 
-/* ── TABLE ── */
-.tbl-wrap { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; margin-bottom: 14px; }
-.tbl-scroll { overflow-x: auto; max-height: 600px; overflow-y: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 10px; }
-thead { background: var(--bg3); position: sticky; top: 0; z-index: 5; }
-th {
-  padding: 8px 10px; text-align: left; font-size: 8px; font-weight: 700;
-  letter-spacing: 1.2px; text-transform: uppercase; color: var(--muted);
-  border-bottom: 1px solid var(--border2); white-space: nowrap;
-  cursor: pointer; user-select: none; font-family: var(--sans);
-}
-th:hover { color: var(--amber); }
-th.sorted { color: var(--amber); }
-th.sorted::after { content: ' ↓'; }
-th.sorted.asc::after { content: ' ↑'; }
-td { padding: 6px 10px; border-bottom: 1px solid var(--border); font-family: var(--mono); vertical-align: middle; }
-tr:hover td { background: rgba(245,158,11,.03); }
-tr.err-row td { background: rgba(239,68,68,.03); }
-.url-cell { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.url-cell a { color: var(--cyan); font-size: 10px; }
+    .nav-btn.active {
+      color: var(--amber);
+      background: rgba(245, 158, 11, .1);
+      border-color: rgba(245, 158, 11, .25);
+    }
 
-/* ── PAGINATION ── */
-.pag { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; padding-top: 10px; }
-.pg { background: var(--bg2); border: 1px solid var(--border2); border-radius: 4px; padding: 4px 9px; font-size: 10px; cursor: pointer; color: var(--text); font-family: var(--mono); transition: all .1s; }
-.pg:hover { border-color: var(--amber); color: var(--amber); }
-.pg.on { background: var(--amber); color: #000; font-weight: 700; border-color: var(--amber); }
-.pag-info { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-left: auto; }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-/* ── SEARCH/FILTER BAR ── */
-.ctrl { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
-.srch {
-  background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px;
-  padding: 7px 11px; font-size: 11px; font-family: var(--mono); color: var(--text);
-  width: 260px; outline: none; transition: border-color .15s;
-}
-.srch:focus { border-color: var(--amber); }
-.flt {
-  background: var(--bg2); border: 1px solid var(--border2); border-radius: 6px;
-  padding: 7px 9px; font-size: 10px; color: var(--text); outline: none; cursor: pointer;
-  font-family: var(--mono); appearance: none;
-}
-.flt:focus { border-color: var(--amber); }
-.result-count { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-left: auto; }
+    .topbar-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border2);
+      font-size: 11px;
+      font-weight: 600;
+      font-family: var(--mono);
+    }
 
-/* ── STEP CARDS ── */
-.step-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-bottom: 14px; }
-@media(max-width:1100px){ .step-grid{grid-template-columns:repeat(2,1fr)} }
-@media(max-width:700px){ .step-grid{grid-template-columns:1fr} }
-.step-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px; position: relative; }
-.step-card.has-err { border-left: 3px solid var(--red); }
-.step-card.all-ok { border-left: 3px solid var(--green); }
-.step-hdr { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-.step-num { font-size: 8px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--amber); font-family: var(--mono); }
-.step-title { font-size: 13px; font-weight: 600; margin-top: 2px; }
-.step-badge { font-size: 9px; font-family: var(--mono); font-weight: 700; padding: 3px 7px; border-radius: 3px; }
-.badge-err { background: rgba(239,68,68,.15); color: var(--red); }
-.badge-ok { background: rgba(16,185,129,.12); color: var(--green); }
-.step-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 12px; }
-.ss-row { display: flex; justify-content: space-between; align-items: center; padding: 3px 0; border-top: 1px solid var(--border); }
-.ss-row:first-child { border-top: none; }
-.ss-key { font-size: 9px; color: var(--muted); }
-.ss-val { font-size: 10px; font-family: var(--mono); font-weight: 600; }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
 
-/* ── WATERFALL ── */
-.wf-wrap { overflow-x: auto; }
-.wf { min-width: 900px; }
-.wf-legend { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
-.wl-item { display: flex; align-items: center; gap: 4px; font-size: 9px; color: var(--dim); }
-.wl-dot { width: 9px; height: 9px; border-radius: 2px; }
-.wf-header { display: grid; grid-template-columns: 40px 200px 56px 70px 1fr; gap: 6px; padding: 5px 0; border-bottom: 1px solid var(--border2); }
-.wf-hcell { font-size: 8px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
-.wf-row { display: grid; grid-template-columns: 40px 200px 56px 70px 1fr; gap: 6px; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.025); align-items: center; }
-.wf-row:hover { background: rgba(245,158,11,.02); }
-.wf-pos { font-size: 9px; color: var(--muted); font-family: var(--mono); text-align: right; }
-.wf-url { font-size: 9px; font-family: var(--mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--cyan); }
-.wf-ms { font-size: 9px; font-family: var(--mono); text-align: right; color: var(--dim); }
-.wf-track { height: 14px; background: var(--bg4); border-radius: 2px; position: relative; overflow: hidden; }
-.wf-seg { position: absolute; height: 100%; }
+    @keyframes pulse {
 
-/* ── ALL FEATURES TABLE ── */
-.feat-section { margin-bottom: 28px; }
-.feat-section-title {
-  font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
-  color: var(--amber); padding: 8px 12px; background: rgba(245,158,11,.07);
-  border: 1px solid rgba(245,158,11,.15); border-radius: 5px; margin-bottom: 0;
-}
-.feat-table { width: 100%; border-collapse: collapse; font-size: 10px; }
-.feat-table td { padding: 4px 12px; border-bottom: 1px solid var(--border); font-family: var(--mono); }
-.feat-table td:first-child { color: var(--dim); width: 280px; font-size: 9px; }
-.feat-table td:nth-child(2) { font-weight: 600; color: var(--text); }
-.feat-table td.v-null { color: var(--muted); font-style: italic; }
-.feat-table td.v-zero { color: var(--bg4); }
-.feat-table td.v-pos { color: var(--amber); }
-.feat-table td.v-err { color: var(--red); }
-.feat-table td.v-ok { color: var(--green); }
-.feat-table tr:hover td { background: rgba(255,255,255,.015); }
+      0%,
+      100% {
+        opacity: 1
+      }
 
-/* ── SCROLLBAR ── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: var(--bg2); }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--muted); }
-</style>
+      50% {
+        opacity: .3
+      }
+    }
+
+    /* File selector */
+    .file-sel {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      padding: 4px 4px 4px 10px;
+      font-size: 10px;
+      font-family: var(--mono);
+    }
+
+    .file-sel label {
+      color: var(--muted);
+      white-space: nowrap;
+      font-size: 9px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .file-sel select {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 11px;
+      outline: none;
+      cursor: pointer;
+      max-width: 220px;
+    }
+
+    .file-sel select option {
+      background: var(--bg3);
+    }
+
+    .file-sel button {
+      background: rgba(245, 158, 11, .12);
+      border: 1px solid rgba(245, 158, 11, .25);
+      border-radius: 4px;
+      color: var(--amber);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      cursor: pointer;
+      font-family: var(--mono);
+      transition: all .15s;
+    }
+
+    .file-sel button:hover {
+      background: rgba(245, 158, 11, .25);
+    }
+
+    /* ── SPLASH ── */
+    #splash {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 85vh;
+      gap: 18px;
+      text-align: center;
+      padding: 32px;
+    }
+
+    .splash-ico {
+      font-size: 52px;
+    }
+
+    .splash-title {
+      font-size: 22px;
+      font-weight: 600;
+    }
+
+    .splash-sub {
+      font-size: 13px;
+      color: var(--dim);
+      max-width: 500px;
+      line-height: 1.8;
+    }
+
+    .splash-code {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 16px 28px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--amber);
+      line-height: 2;
+      text-align: left;
+    }
+
+    #loading {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 70vh;
+      gap: 16px;
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid var(--border2);
+      border-top-color: var(--amber);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ── LAYOUT ── */
+    .main {
+      padding: 24px;
+      max-width: 1600px;
+      margin: 0 auto;
+      display: none;
+    }
+
+    .pane {
+      display: none;
+    }
+
+    .pane.active {
+      display: block;
+      animation: fadeIn .2s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    /* ── SECTION HEADER ── */
+    .sh {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2.5px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 28px 0 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sh::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .sh:first-child {
+      margin-top: 0;
+    }
+
+    /* ── GRID UTILS ── */
+    .g {
+      display: grid;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .g-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .g-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .g-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .g-1-2 {
+      grid-template-columns: 1fr 2fr;
+    }
+
+    .g-2-1 {
+      grid-template-columns: 2fr 1fr;
+    }
+
+    @media(max-width:1200px) {
+      .g-4 {
+        grid-template-columns: repeat(2, 1fr)
+      }
+
+      .g-3 {
+        grid-template-columns: 1fr 1fr
+      }
+    }
+
+    @media(max-width:700px) {
+
+      .g-4,
+      .g-3,
+      .g-2,
+      .g-1-2,
+      .g-2-1 {
+        grid-template-columns: 1fr
+      }
+
+      .main {
+        padding: 12px
+      }
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-accent {
+      border-top: 2px solid var(--amber);
+    }
+
+    .card-red {
+      border-top: 2px solid var(--red);
+    }
+
+    .card-green {
+      border-top: 2px solid var(--green);
+    }
+
+    .card-cyan {
+      border-top: 2px solid var(--cyan);
+    }
+
+    .card-purple {
+      border-top: 2px solid var(--purple);
+    }
+
+    /* ── KPI ── */
+    .kpi-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .kpi-value {
+      font-family: var(--mono);
+      font-size: 26px;
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .kpi-sub {
+      font-size: 10px;
+      color: var(--dim);
+      margin-top: 5px;
+      font-family: var(--mono);
+    }
+
+    .kv-amber {
+      color: var(--amber);
+    }
+
+    .kv-green {
+      color: var(--green);
+    }
+
+    .kv-red {
+      color: var(--red);
+    }
+
+    .kv-cyan {
+      color: var(--cyan);
+    }
+
+    .kv-purple {
+      color: var(--purple);
+    }
+
+    .kv-orange {
+      color: var(--orange);
+    }
+
+    /* ── INLINE BAR LIST ── */
+    .blist {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .brow {
+      display: grid;
+      grid-template-columns: 190px 1fr 80px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .blabel {
+      font-size: 10px;
+      color: var(--dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-family: var(--mono);
+    }
+
+    .btrack {
+      height: 5px;
+      background: var(--bg4);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .bfill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width .5s ease;
+    }
+
+    .bnum {
+      font-size: 10px;
+      font-family: var(--mono);
+      font-weight: 600;
+      text-align: right;
+      color: var(--text);
+    }
+
+    /* ── DONUT ── */
+    .donut-wrap {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .donut-svg-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    svg.donut {
+      transform: rotate(-90deg);
+      display: block;
+    }
+
+    .donut-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+
+    .donut-val {
+      font-family: var(--mono);
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .donut-sub {
+      font-size: 8px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .donut-legend {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .dl-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .dl-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .dl-name {
+      font-size: 10px;
+      color: var(--dim);
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dl-val {
+      font-size: 10px;
+      font-family: var(--mono);
+      font-weight: 600;
+    }
+
+    /* ── PILLS ── */
+    .pill {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 3px;
+      font-size: 9px;
+      font-family: var(--mono);
+      font-weight: 700;
+    }
+
+    .p2xx {
+      background: rgba(16, 185, 129, .15);
+      color: var(--green);
+    }
+
+    .p3xx {
+      background: rgba(251, 191, 36, .12);
+      color: var(--amber2);
+    }
+
+    .p4xx {
+      background: rgba(249, 115, 22, .15);
+      color: var(--orange);
+    }
+
+    .p5xx {
+      background: rgba(239, 68, 68, .15);
+      color: var(--red);
+    }
+
+    .p0xx {
+      background: rgba(167, 139, 250, .15);
+      color: var(--purple);
+    }
+
+    .t-doc {
+      background: rgba(34, 211, 238, .12);
+      color: var(--cyan);
+    }
+
+    .t-js {
+      background: rgba(251, 191, 36, .12);
+      color: var(--amber2);
+    }
+
+    .t-css {
+      background: rgba(167, 139, 250, .12);
+      color: var(--purple);
+    }
+
+    .t-img {
+      background: rgba(239, 68, 68, .12);
+      color: #f87171;
+    }
+
+    .t-fetch {
+      background: rgba(16, 185, 129, .12);
+      color: var(--green);
+    }
+
+    .t-font {
+      background: rgba(59, 130, 246, .12);
+      color: var(--blue);
+    }
+
+    .t-other {
+      background: rgba(100, 116, 139, .12);
+      color: var(--dim);
+    }
+
+    /* ── TABLE ── */
+    .tbl-wrap {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+
+    .tbl-scroll {
+      overflow-x: auto;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+    }
+
+    thead {
+      background: var(--bg3);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    th {
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1.2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border2);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+      font-family: var(--sans);
+    }
+
+    th:hover {
+      color: var(--amber);
+    }
+
+    th.sorted {
+      color: var(--amber);
+    }
+
+    th.sorted::after {
+      content: ' ↓';
+    }
+
+    th.sorted.asc::after {
+      content: ' ↑';
+    }
+
+    td {
+      padding: 6px 10px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      vertical-align: middle;
+    }
+
+    tr:hover td {
+      background: rgba(245, 158, 11, .03);
+    }
+
+    tr.err-row td {
+      background: rgba(239, 68, 68, .03);
+    }
+
+    .url-cell {
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .url-cell a {
+      color: var(--cyan);
+      font-size: 10px;
+    }
+
+    /* ── PAGINATION ── */
+    .pag {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding-top: 10px;
+    }
+
+    .pg {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 4px;
+      padding: 4px 9px;
+      font-size: 10px;
+      cursor: pointer;
+      color: var(--text);
+      font-family: var(--mono);
+      transition: all .1s;
+    }
+
+    .pg:hover {
+      border-color: var(--amber);
+      color: var(--amber);
+    }
+
+    .pg.on {
+      background: var(--amber);
+      color: #000;
+      font-weight: 700;
+      border-color: var(--amber);
+    }
+
+    .pag-info {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: var(--mono);
+      margin-left: auto;
+    }
+
+    /* ── SEARCH/FILTER BAR ── */
+    .ctrl {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .srch {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      padding: 7px 11px;
+      font-size: 11px;
+      font-family: var(--mono);
+      color: var(--text);
+      width: 260px;
+      outline: none;
+      transition: border-color .15s;
+    }
+
+    .srch:focus {
+      border-color: var(--amber);
+    }
+
+    .flt {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      padding: 7px 9px;
+      font-size: 10px;
+      color: var(--text);
+      outline: none;
+      cursor: pointer;
+      font-family: var(--mono);
+      appearance: none;
+    }
+
+    .flt:focus {
+      border-color: var(--amber);
+    }
+
+    .result-count {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: var(--mono);
+      margin-left: auto;
+    }
+
+    /* ── STEP CARDS ── */
+    .step-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    @media(max-width:1100px) {
+      .step-grid {
+        grid-template-columns: repeat(2, 1fr)
+      }
+    }
+
+    @media(max-width:700px) {
+      .step-grid {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .step-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      position: relative;
+    }
+
+    .step-card.has-err {
+      border-left: 3px solid var(--red);
+    }
+
+    .step-card.all-ok {
+      border-left: 3px solid var(--green);
+    }
+
+    .step-hdr {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 12px;
+    }
+
+    .step-num {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--amber);
+      font-family: var(--mono);
+    }
+
+    .step-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .step-badge {
+      font-size: 9px;
+      font-family: var(--mono);
+      font-weight: 700;
+      padding: 3px 7px;
+      border-radius: 3px;
+    }
+
+    .badge-err {
+      background: rgba(239, 68, 68, .15);
+      color: var(--red);
+    }
+
+    .badge-ok {
+      background: rgba(16, 185, 129, .12);
+      color: var(--green);
+    }
+
+    .step-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px 12px;
+    }
+
+    .ss-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 3px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .ss-row:first-child {
+      border-top: none;
+    }
+
+    .ss-key {
+      font-size: 9px;
+      color: var(--muted);
+    }
+
+    .ss-val {
+      font-size: 10px;
+      font-family: var(--mono);
+      font-weight: 600;
+    }
+
+    /* ── WATERFALL ── */
+    .wf-wrap {
+      overflow-x: auto;
+    }
+
+    .wf {
+      min-width: 900px;
+    }
+
+    .wf-legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .wl-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 9px;
+      color: var(--dim);
+    }
+
+    .wl-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 2px;
+    }
+
+    .wf-header {
+      display: grid;
+      grid-template-columns: 40px 200px 56px 70px 1fr;
+      gap: 6px;
+      padding: 5px 0;
+      border-bottom: 1px solid var(--border2);
+    }
+
+    .wf-hcell {
+      font-size: 8px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .wf-row {
+      display: grid;
+      grid-template-columns: 40px 200px 56px 70px 1fr;
+      gap: 6px;
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, .025);
+      align-items: center;
+    }
+
+    .wf-row:hover {
+      background: rgba(245, 158, 11, .02);
+    }
+
+    .wf-pos {
+      font-size: 9px;
+      color: var(--muted);
+      font-family: var(--mono);
+      text-align: right;
+    }
+
+    .wf-url {
+      font-size: 9px;
+      font-family: var(--mono);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--cyan);
+    }
+
+    .wf-ms {
+      font-size: 9px;
+      font-family: var(--mono);
+      text-align: right;
+      color: var(--dim);
+    }
+
+    .wf-track {
+      height: 14px;
+      background: var(--bg4);
+      border-radius: 2px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .wf-seg {
+      position: absolute;
+      height: 100%;
+    }
+
+    /* ── ALL FEATURES TABLE ── */
+    .feat-section {
+      margin-bottom: 28px;
+    }
+
+    .feat-section-title {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--amber);
+      padding: 8px 12px;
+      background: rgba(245, 158, 11, .07);
+      border: 1px solid rgba(245, 158, 11, .15);
+      border-radius: 5px;
+      margin-bottom: 0;
+    }
+
+    .feat-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10px;
+    }
+
+    .feat-table td {
+      padding: 4px 12px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+    }
+
+    .feat-table td:first-child {
+      color: var(--dim);
+      width: 280px;
+      font-size: 9px;
+    }
+
+    .feat-table td:nth-child(2) {
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .feat-table td.v-null {
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .feat-table td.v-zero {
+      color: var(--bg4);
+    }
+
+    .feat-table td.v-pos {
+      color: var(--amber);
+    }
+
+    .feat-table td.v-err {
+      color: var(--red);
+    }
+
+    .feat-table td.v-ok {
+      color: var(--green);
+    }
+
+    .feat-table tr:hover td {
+      background: rgba(255, 255, 255, .015);
+    }
+
+    /* ── SCROLLBAR ── */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--bg2);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border2);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--muted);
+    }
+  </style>
 </head>
+
 <body>
 
-<!-- ═══ TOPBAR ═══ -->
-<div class="topbar">
-  <div class="topbar-brand">
-    <div class="brand-icon">HAR</div>
-    <div class="brand-name">Feature <span>Report</span></div>
-  </div>
-  <nav class="topbar-nav" id="topbar-nav" style="display:none">
-    <button class="nav-btn active" onclick="showPane('overview',this)">Vue d'ensemble</button>
-    <button class="nav-btn" onclick="showPane('steps',this)">Steps</button>
-    <button class="nav-btn" onclick="showPane('requests',this)">Requêtes</button>
-    <button class="nav-btn" onclick="showPane('waterfall',this)">Waterfall</button>
-    <button class="nav-btn" onclick="showPane('features',this)">Toutes les features</button>
-  </nav>
-  <div class="topbar-right">
-    <div class="file-sel" id="file-sel" style="display:none">
-      <label>Rapport</label>
-      <select id="file-select" onchange="loadReport(this.value)"></select>
-      <button onclick="fetchFileList()">↻</button>
+  <!-- ═══ TOPBAR ═══ -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-icon">HAR</div>
+      <div class="brand-name">Feature <span>Report</span></div>
     </div>
-    <div class="topbar-status" id="top-status" style="display:none">
-      <div class="status-dot" id="top-dot"></div>
-      <span id="top-label"></span>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ SPLASH ═══ -->
-<div id="splash">
-  <div class="splash-ico">📡</div>
-  <div class="splash-title">HAR Feature Report — Mode dynamique</div>
-  <div class="splash-sub">Lance le serveur Python dans le dossier contenant tes fichiers JSON :</div>
-  <div class="splash-code">
-    python3 har_server.py<br>
-    <span style="color:var(--dim)"># puis ouvre http://localhost:7331</span>
-  </div>
-  <div class="splash-sub">Place tes <span style="color:var(--amber)">*.json</span> dans le même dossier que ce rapport et <code style="color:var(--cyan)">har_server.py</code>.</div>
-</div>
-
-<!-- ═══ LOADING ═══ -->
-<div id="loading">
-  <div class="spinner"></div>
-  <div style="font-size:12px;color:var(--dim);font-family:var(--mono);margin-top:8px">Chargement…</div>
-</div>
-
-<!-- ═══ MAIN ═══ -->
-<div class="main" id="main">
-
-<!-- OVERVIEW -->
-<div class="pane active" id="pane-overview">
-  <div class="sh">Indicateurs clés du scénario</div>
-  <div class="g g-4" id="main-kpis"></div>
-  <div class="g g-1-2">
-    <div>
-      <div class="sh">Distribution des ressources</div>
-      <div class="card" id="donut-wrap"></div>
-    </div>
-    <div>
-      <div class="sh">Codes HTTP</div>
-      <div class="card" id="http-bars"></div>
+    <nav class="topbar-nav" id="topbar-nav" style="display:none">
+      <button class="nav-btn active" onclick="showPane('overview',this)">Vue d'ensemble</button>
+      <button class="nav-btn" onclick="showPane('steps',this)">Steps</button>
+      <button class="nav-btn" onclick="showPane('requests',this)">Requêtes</button>
+      <button class="nav-btn" onclick="showPane('waterfall',this)">Waterfall</button>
+      <button class="nav-btn" onclick="showPane('features',this)">Toutes les features</button>
+    </nav>
+    <div class="topbar-right">
+      <div class="file-sel" id="file-sel" style="display:none">
+        <label>Rapport</label>
+        <select id="file-select" onchange="loadReport(this.value)"></select>
+        <button onclick="fetchFileList()">↻</button>
+      </div>
+      <div class="topbar-status" id="top-status" style="display:none">
+        <div class="status-dot" id="top-dot"></div>
+        <span id="top-label"></span>
+      </div>
     </div>
   </div>
-  <div class="sh">Timings réseau — Statistiques complètes</div>
-  <div class="g g-4" id="timing-kpis"></div>
-  <div class="g g-2">
-    <div>
-      <div class="sh">Réseau & Connexions</div>
-      <div class="card" id="network-bars"></div>
+
+  <!-- ═══ SPLASH ═══ -->
+  <div id="splash">
+    <div class="splash-ico">📡</div>
+    <div class="splash-title">HAR Feature Report — Mode dynamique</div>
+    <div class="splash-sub">Lance le serveur Python dans le dossier contenant tes fichiers JSON :</div>
+    <div class="splash-code">
+      python3 har_server.py<br>
+      <span style="color:var(--dim)"># puis ouvre http://localhost:7331</span>
     </div>
-    <div>
-      <div class="sh">Volumes de données</div>
-      <div class="card" id="volume-bars"></div>
+    <div class="splash-sub">Place tes <span style="color:var(--amber)">*.json</span> dans le même dossier que ce rapport
+      et <code style="color:var(--cyan)">har_server.py</code>.</div>
+  </div>
+
+  <!-- ═══ LOADING ═══ -->
+  <div id="loading">
+    <div class="spinner"></div>
+    <div style="font-size:12px;color:var(--dim);font-family:var(--mono);margin-top:8px">Chargement…</div>
+  </div>
+
+  <!-- ═══ MAIN ═══ -->
+  <div class="main" id="main">
+
+    <!-- OVERVIEW -->
+    <div class="pane active" id="pane-overview">
+      <div class="sh">Indicateurs clés du scénario</div>
+      <div class="g g-4" id="main-kpis"></div>
+      <div class="g g-1-2">
+        <div>
+          <div class="sh">Distribution des ressources</div>
+          <div class="card" id="donut-wrap"></div>
+        </div>
+        <div>
+          <div class="sh">Codes HTTP</div>
+          <div class="card" id="http-bars"></div>
+        </div>
+      </div>
+      <div class="sh">Timings réseau — Statistiques complètes</div>
+      <div class="g g-4" id="timing-kpis"></div>
+      <div class="g g-2">
+        <div>
+          <div class="sh">Réseau & Connexions</div>
+          <div class="card" id="network-bars"></div>
+        </div>
+        <div>
+          <div class="sh">Volumes de données</div>
+          <div class="card" id="volume-bars"></div>
+        </div>
+      </div>
+      <div class="g g-2">
+        <div>
+          <div class="sh">Sécurité & Headers</div>
+          <div class="card" id="security-bars"></div>
+        </div>
+        <div>
+          <div class="sh">Cache & Compression</div>
+          <div class="card" id="cache-bars"></div>
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="g g-2">
-    <div>
-      <div class="sh">Sécurité & Headers</div>
-      <div class="card" id="security-bars"></div>
+
+    <!-- STEPS -->
+    <div class="pane" id="pane-steps">
+      <div class="sh">Étapes du parcours</div>
+      <div class="step-grid" id="step-cards"></div>
+      <div class="sh">TTFB moyen par step</div>
+      <div class="card" id="step-ttfb-bar"></div>
+      <div class="sh" style="margin-top:14px">Durée moyenne requête par step</div>
+      <div class="card" id="step-time-bar"></div>
+      <div class="sh" style="margin-top:14px">Bytes téléchargés par step</div>
+      <div class="card" id="step-bytes-bar"></div>
+      <div class="sh" style="margin-top:14px">Tableau complet — toutes les features par step (<span
+          id="t2-feat-count"></span> features)</div>
+      <div class="tbl-wrap">
+        <div class="tbl-scroll">
+          <table id="steps-table"></table>
+        </div>
+      </div>
     </div>
-    <div>
-      <div class="sh">Cache & Compression</div>
-      <div class="card" id="cache-bars"></div>
+
+    <!-- REQUESTS -->
+    <div class="pane" id="pane-requests">
+      <div class="ctrl">
+        <input class="srch" id="r-search" placeholder="Rechercher URL, domaine, type…" oninput="applyFilters()">
+        <select class="flt" id="r-step" onchange="applyFilters()">
+          <option value="">Tous les steps</option>
+        </select>
+        <select class="flt" id="r-status" onchange="applyFilters()">
+          <option value="">Tous statuts</option>
+          <option value="2">2xx</option>
+          <option value="3">3xx</option>
+          <option value="4">4xx</option>
+          <option value="5">5xx</option>
+          <option value="0">0/Fail</option>
+        </select>
+        <select class="flt" id="r-type" onchange="applyFilters()">
+          <option value="">Tous types</option>
+          <option>document</option>
+          <option>script</option>
+          <option>stylesheet</option>
+          <option>image</option>
+          <option>fetch</option>
+          <option>font</option>
+          <option>other</option>
+        </select>
+        <select class="flt" id="r-party" onchange="applyFilters()">
+          <option value="">1st + 3rd party</option>
+          <option value="0">1st party</option>
+          <option value="1">3rd party</option>
+        </select>
+        <select class="flt" id="r-err" onchange="applyFilters()">
+          <option value="">Toutes</option>
+          <option value="1">Erreurs seulement</option>
+        </select>
+        <span class="result-count" id="r-count"></span>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-scroll">
+          <table id="req-table">
+            <thead>
+              <tr>
+                <th onclick="sortBy('request_position')">#</th>
+                <th onclick="sortBy('request_step_name')">Step</th>
+                <th onclick="sortBy('request_method')">Méth.</th>
+                <th>URL</th>
+                <th onclick="sortBy('response_status')">Status</th>
+                <th onclick="sortBy('request_resource_type')">Type</th>
+                <th onclick="sortBy('timing_total_ms')">Total ms</th>
+                <th onclick="sortBy('timing_wait_ms')">TTFB ms</th>
+                <th onclick="sortBy('timing_blocked_ms')">Blocked</th>
+                <th onclick="sortBy('response_content_size')">Taille</th>
+                <th onclick="sortBy('response_is_compressed')">Compressé</th>
+                <th onclick="sortBy('response_compression_ratio')">Ratio</th>
+                <th onclick="sortBy('request_is_third_party')">Party</th>
+                <th onclick="sortBy('network_connection_reused')">Conn.réut</th>
+                <th onclick="sortBy('network_dns_cached')">DNS cache</th>
+                <th onclick="sortBy('request_url_is_api')">API</th>
+                <th onclick="sortBy('request_querystring_count')">QS params</th>
+                <th onclick="sortBy('request_cookie_count')">Cookies</th>
+                <th onclick="sortBy('response_has_hsts')">HSTS</th>
+                <th onclick="sortBy('response_has_csp')">CSP</th>
+                <th onclick="sortBy('response_has_etag')">ETag</th>
+                <th onclick="sortBy('timing_ratio_wait')">Ratio TTFB</th>
+                <th>Request ID</th>
+              </tr>
+            </thead>
+            <tbody id="req-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="pag" id="req-pag"></div>
     </div>
-  </div>
-</div>
 
-<!-- STEPS -->
-<div class="pane" id="pane-steps">
-  <div class="sh">Étapes du parcours</div>
-  <div class="step-grid" id="step-cards"></div>
-  <div class="sh">TTFB moyen par step</div>
-  <div class="card" id="step-ttfb-bar"></div>
-  <div class="sh" style="margin-top:14px">Durée moyenne requête par step</div>
-  <div class="card" id="step-time-bar"></div>
-  <div class="sh" style="margin-top:14px">Bytes téléchargés par step</div>
-  <div class="card" id="step-bytes-bar"></div>
-  <div class="sh" style="margin-top:14px">Tableau complet — toutes les features par step (<span id="t2-feat-count"></span> features)</div>
-  <div class="tbl-wrap">
-    <div class="tbl-scroll">
-      <table id="steps-table"></table>
+    <!-- WATERFALL -->
+    <div class="pane" id="pane-waterfall">
+      <div class="sh">Waterfall — 80 premières requêtes</div>
+      <div class="wf-legend">
+        <div class="wl-item">
+          <div class="wl-dot" style="background:#374151"></div>Blocked
+        </div>
+        <div class="wl-item">
+          <div class="wl-dot" style="background:#059669"></div>DNS
+        </div>
+        <div class="wl-item">
+          <div class="wl-dot" style="background:#1d4ed8"></div>Connect TCP
+        </div>
+        <div class="wl-item">
+          <div class="wl-dot" style="background:#7c3aed"></div>SSL/TLS
+        </div>
+        <div class="wl-item">
+          <div class="wl-dot" style="background:#92400e"></div>Send
+        </div>
+        <div class="wl-item">
+          <div class="wl-dot" style="background:#d97706"></div>Wait (TTFB)
+        </div>
+        <div class="wl-item">
+          <div class="wl-dot" style="background:#065f46"></div>Receive
+        </div>
+      </div>
+      <div class="wf-wrap">
+        <div class="wf" id="waterfall-inner"></div>
+      </div>
     </div>
-  </div>
-</div>
 
-<!-- REQUESTS -->
-<div class="pane" id="pane-requests">
-  <div class="ctrl">
-    <input class="srch" id="r-search" placeholder="Rechercher URL, domaine, type…" oninput="applyFilters()">
-    <select class="flt" id="r-step" onchange="applyFilters()"><option value="">Tous les steps</option></select>
-    <select class="flt" id="r-status" onchange="applyFilters()">
-      <option value="">Tous statuts</option>
-      <option value="2">2xx</option><option value="3">3xx</option>
-      <option value="4">4xx</option><option value="5">5xx</option><option value="0">0/Fail</option>
-    </select>
-    <select class="flt" id="r-type" onchange="applyFilters()">
-      <option value="">Tous types</option>
-      <option>document</option><option>script</option><option>stylesheet</option>
-      <option>image</option><option>fetch</option><option>font</option><option>other</option>
-    </select>
-    <select class="flt" id="r-party" onchange="applyFilters()">
-      <option value="">1st + 3rd party</option>
-      <option value="0">1st party</option><option value="1">3rd party</option>
-    </select>
-    <select class="flt" id="r-err" onchange="applyFilters()">
-      <option value="">Toutes</option><option value="1">Erreurs seulement</option>
-    </select>
-    <span class="result-count" id="r-count"></span>
-  </div>
-  <div class="tbl-wrap">
-    <div class="tbl-scroll">
-      <table id="req-table">
-        <thead><tr>
-          <th onclick="sortBy('request_position')">#</th>
-          <th onclick="sortBy('request_step_name')">Step</th>
-          <th onclick="sortBy('request_method')">Méth.</th>
-          <th>URL</th>
-          <th onclick="sortBy('response_status')">Status</th>
-          <th onclick="sortBy('request_resource_type')">Type</th>
-          <th onclick="sortBy('timing_total_ms')">Total ms</th>
-          <th onclick="sortBy('timing_wait_ms')">TTFB ms</th>
-          <th onclick="sortBy('timing_blocked_ms')">Blocked</th>
-          <th onclick="sortBy('response_content_size')">Taille</th>
-          <th onclick="sortBy('response_is_compressed')">Compressé</th>
-          <th onclick="sortBy('response_compression_ratio')">Ratio</th>
-          <th onclick="sortBy('request_is_third_party')">Party</th>
-          <th onclick="sortBy('network_connection_reused')">Conn.réut</th>
-          <th onclick="sortBy('network_dns_cached')">DNS cache</th>
-          <th onclick="sortBy('request_url_is_api')">API</th>
-          <th onclick="sortBy('request_querystring_count')">QS params</th>
-          <th onclick="sortBy('request_cookie_count')">Cookies</th>
-          <th onclick="sortBy('response_has_hsts')">HSTS</th>
-          <th onclick="sortBy('response_has_csp')">CSP</th>
-          <th onclick="sortBy('response_has_etag')">ETag</th>
-          <th onclick="sortBy('timing_ratio_wait')">Ratio TTFB</th>
-          <th>Request ID</th>
-        </tr></thead>
-        <tbody id="req-tbody"></tbody>
-      </table>
+    <!-- ALL FEATURES -->
+    <div class="pane" id="pane-features">
+      <div class="sh">Scénario — toutes les features T3 (<span id="t3-count"></span>)</div>
+      <div id="t3-groups"></div>
+      <div class="sh" style="margin-top:28px">Steps — features T2 par step</div>
+      <div id="t2-all"></div>
+      <div class="sh" style="margin-top:28px">Requêtes — features T1 — <span id="t1-feat-sel-count"></span></div>
+      <div class="ctrl" style="margin-bottom:12px">
+        <input class="srch" id="t1-search" placeholder="Filtrer requêtes T1…" oninput="renderT1Table()">
+        <span class="result-count" id="t1-count-label"></span>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-scroll" style="max-height:500px">
+          <table id="t1-feat-table"></table>
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="pag" id="req-pag"></div>
-</div>
 
-<!-- WATERFALL -->
-<div class="pane" id="pane-waterfall">
-  <div class="sh">Waterfall — 80 premières requêtes</div>
-  <div class="wf-legend">
-    <div class="wl-item"><div class="wl-dot" style="background:#374151"></div>Blocked</div>
-    <div class="wl-item"><div class="wl-dot" style="background:#059669"></div>DNS</div>
-    <div class="wl-item"><div class="wl-dot" style="background:#1d4ed8"></div>Connect TCP</div>
-    <div class="wl-item"><div class="wl-dot" style="background:#7c3aed"></div>SSL/TLS</div>
-    <div class="wl-item"><div class="wl-dot" style="background:#92400e"></div>Send</div>
-    <div class="wl-item"><div class="wl-dot" style="background:#d97706"></div>Wait (TTFB)</div>
-    <div class="wl-item"><div class="wl-dot" style="background:#065f46"></div>Receive</div>
-  </div>
-  <div class="wf-wrap">
-    <div class="wf" id="waterfall-inner"></div>
-  </div>
-</div>
+  </div><!-- /main -->
 
-<!-- ALL FEATURES -->
-<div class="pane" id="pane-features">
-  <div class="sh">Scénario — toutes les features T3 (<span id="t3-count"></span>)</div>
-  <div id="t3-groups"></div>
-  <div class="sh" style="margin-top:28px">Steps — features T2 par step</div>
-  <div id="t2-all"></div>
-  <div class="sh" style="margin-top:28px">Requêtes — features T1 — <span id="t1-feat-sel-count"></span></div>
-  <div class="ctrl" style="margin-bottom:12px">
-    <input class="srch" id="t1-search" placeholder="Filtrer requêtes T1…" oninput="renderT1Table()">
-    <span class="result-count" id="t1-count-label"></span>
-  </div>
-  <div class="tbl-wrap">
-    <div class="tbl-scroll" style="max-height:500px">
-      <table id="t1-feat-table"></table>
-    </div>
-  </div>
-</div>
+  <script>
+    // ════════════════════════ CONFIG ════════════════════════
+    const API = 'http://localhost:7331';
 
-</div><!-- /main -->
+    // ════════════════════════ STATE ════════════════════════
+    let SC, STEPS, REQS, META;
+    let filtered = [], curPage = 1, pageSize = 50;
+    let sortKey = 'request_position', sortAsc = true;
+    let FILES = [], CURRENT = null;
 
-<script>
-// ════════════════════════ CONFIG ════════════════════════
-const API = 'http://localhost:7331';
+    // ════════════════════════ SERVER / INIT ════════════════════════
+    async function fetchFileList() {
+      try {
+        const r = await fetch(`${API}/list`);
+        if (!r.ok) throw new Error();
+        const j = await r.json();
+        FILES = j.files || [];
+        const sel = document.getElementById('file-select');
+        sel.innerHTML = FILES.map(f => `<option value="${f}">${f}</option>`).join('');
+        if (FILES.length === 0) { showSplash('Aucun fichier JSON trouvé dans le dossier.'); return; }
+        const toLoad = (CURRENT && FILES.includes(CURRENT)) ? CURRENT : FILES[0];
+        await loadReport(toLoad);
+      } catch (e) {
+        document.getElementById('splash').style.display = 'flex';
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
 
-// ════════════════════════ STATE ════════════════════════
-let SC, STEPS, REQS, META;
-let filtered = [], curPage = 1, pageSize = 50;
-let sortKey = 'request_position', sortAsc = true;
-let FILES = [], CURRENT = null;
+    async function loadReport(filename) {
+      CURRENT = filename;
+      document.getElementById('file-select').value = filename;
+      document.getElementById('splash').style.display = 'none';
+      document.getElementById('loading').style.display = 'flex';
+      document.getElementById('main').style.display = 'none';
+      document.getElementById('topbar-nav').style.display = 'none';
+      document.getElementById('top-status').style.display = 'none';
+      document.getElementById('file-sel').style.display = 'none';
+      try {
+        const r = await fetch(`${API}/file?name=${encodeURIComponent(filename)}`);
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const DATA = await r.json();
+        SC = DATA.tableau_3_scenarios;
+        STEPS = DATA.tableau_2_steps;
+        REQS = DATA.tableau_1_requetes;
+        META = DATA.meta;
+        filtered = [...REQS];
+        curPage = 1;
+        initAll();
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('main').style.display = 'block';
+        document.getElementById('topbar-nav').style.display = 'flex';
+        document.getElementById('top-status').style.display = 'flex';
+        if (FILES.length > 1) document.getElementById('file-sel').style.display = 'flex';
+        // reset to overview
+        showPane('overview', document.querySelectorAll('.nav-btn')[0]);
+      } catch (e) {
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('splash').style.display = 'flex';
+      }
+    }
 
-// ════════════════════════ SERVER / INIT ════════════════════════
-async function fetchFileList() {
-  try {
-    const r = await fetch(`${API}/list`);
-    if (!r.ok) throw new Error();
-    const j = await r.json();
-    FILES = j.files || [];
-    const sel = document.getElementById('file-select');
-    sel.innerHTML = FILES.map(f => `<option value="${f}">${f}</option>`).join('');
-    if (FILES.length === 0) { showSplash('Aucun fichier JSON trouvé dans le dossier.'); return; }
-    const toLoad = (CURRENT && FILES.includes(CURRENT)) ? CURRENT : FILES[0];
-    await loadReport(toLoad);
-  } catch(e) {
-    document.getElementById('splash').style.display = 'flex';
-    document.getElementById('loading').style.display = 'none';
-  }
-}
+    function showSplash(msg) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('splash').style.display = 'flex';
+    }
 
-async function loadReport(filename) {
-  CURRENT = filename;
-  document.getElementById('file-select').value = filename;
-  document.getElementById('splash').style.display = 'none';
-  document.getElementById('loading').style.display = 'flex';
-  document.getElementById('main').style.display = 'none';
-  document.getElementById('topbar-nav').style.display = 'none';
-  document.getElementById('top-status').style.display = 'none';
-  document.getElementById('file-sel').style.display = 'none';
-  try {
-    const r = await fetch(`${API}/file?name=${encodeURIComponent(filename)}`);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const DATA = await r.json();
-    SC = DATA.tableau_3_scenarios;
-    STEPS = DATA.tableau_2_steps;
-    REQS = DATA.tableau_1_requetes;
-    META = DATA.meta;
-    filtered = [...REQS];
-    curPage = 1;
-    initAll();
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('main').style.display = 'block';
-    document.getElementById('topbar-nav').style.display = 'flex';
-    document.getElementById('top-status').style.display = 'flex';
-    if (FILES.length > 1) document.getElementById('file-sel').style.display = 'flex';
-    // reset to overview
-    showPane('overview', document.querySelectorAll('.nav-btn')[0]);
-  } catch(e) {
-    document.getElementById('loading').style.display = 'none';
-    document.getElementById('splash').style.display = 'flex';
-  }
-}
+    (async function init() {
+      document.getElementById('splash').style.display = 'none';
+      document.getElementById('loading').style.display = 'flex';
+      try {
+        const r = await fetch(`${API}/ping`, { signal: AbortSignal.timeout(2500) });
+        if (r.ok) { await fetchFileList(); return; }
+      } catch (e) { }
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('splash').style.display = 'flex';
+    })();
 
-function showSplash(msg) {
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('splash').style.display = 'flex';
-}
+    // ════════════════════════ UTILS ════════════════════════
+    const fmt = (v, d = 1) => {
+      if (v === null || v === undefined) return '—';
+      if (typeof v === 'number') {
+        if (!isFinite(v)) return '—';
+        if (Number.isInteger(v)) return v.toLocaleString('fr-FR');
+        return v.toFixed(d);
+      }
+      return String(v);
+    };
+    const fmtMs = v => (v === null || v === undefined || v < 0) ? '—' : fmt(v, 1) + ' ms';
+    const fmtB = b => {
+      if (!b || b === 0) return '0 B';
+      const u = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(Math.abs(b)) / Math.log(1024));
+      return (b / Math.pow(1024, i)).toFixed(1) + ' ' + u[Math.min(i, 3)];
+    };
+    const fmtPct = v => (v === null || v === undefined) ? '—' : fmt(v, 2) + '%';
+    const n = v => v ?? 0;
+    const statusPill = s => {
+      const [cls, label] = s >= 200 && s < 300 ? ['p2xx', s] : s >= 300 && s < 400 ? ['p3xx', s] :
+        s >= 400 && s < 500 ? ['p4xx', s] : s >= 500 && s < 600 ? ['p5xx', s] : ['p0xx', s || 0];
+      return `<span class="pill ${cls}">${label}</span>`;
+    };
+    const typePill = t => {
+      const m = { document: 't-doc', script: 't-js', stylesheet: 't-css', image: 't-img', fetch: 't-fetch', font: 't-font' };
+      return `<span class="pill ${m[t] || 't-other'}">${t || 'other'}</span>`;
+    };
+    const yn = v => v ? `<span style="color:var(--green)">✓</span>` : `<span style="color:var(--bg4)">✗</span>`;
 
-(async function init() {
-  document.getElementById('splash').style.display = 'none';
-  document.getElementById('loading').style.display = 'flex';
-  try {
-    const r = await fetch(`${API}/ping`, { signal: AbortSignal.timeout(2500) });
-    if (r.ok) { await fetchFileList(); return; }
-  } catch(e) {}
-  document.getElementById('loading').style.display = 'none';
-  document.getElementById('splash').style.display = 'flex';
-})();
-
-// ════════════════════════ UTILS ════════════════════════
-const fmt = (v, d=1) => {
-  if (v === null || v === undefined) return '—';
-  if (typeof v === 'number') {
-    if (!isFinite(v)) return '—';
-    if (Number.isInteger(v)) return v.toLocaleString('fr-FR');
-    return v.toFixed(d);
-  }
-  return String(v);
-};
-const fmtMs = v => (v === null || v === undefined || v < 0) ? '—' : fmt(v, 1) + ' ms';
-const fmtB = b => {
-  if (!b || b === 0) return '0 B';
-  const u = ['B','KB','MB','GB'];
-  const i = Math.floor(Math.log(Math.abs(b)) / Math.log(1024));
-  return (b / Math.pow(1024, i)).toFixed(1) + ' ' + u[Math.min(i, 3)];
-};
-const fmtPct = v => (v === null || v === undefined) ? '—' : fmt(v, 2) + '%';
-const n = v => v ?? 0;
-const statusPill = s => {
-  const [cls, label] = s >= 200 && s < 300 ? ['p2xx',s] : s >= 300 && s < 400 ? ['p3xx',s] :
-    s >= 400 && s < 500 ? ['p4xx',s] : s >= 500 && s < 600 ? ['p5xx',s] : ['p0xx', s || 0];
-  return `<span class="pill ${cls}">${label}</span>`;
-};
-const typePill = t => {
-  const m = {document:'t-doc',script:'t-js',stylesheet:'t-css',image:'t-img',fetch:'t-fetch',font:'t-font'};
-  return `<span class="pill ${m[t]||'t-other'}">${t||'other'}</span>`;
-};
-const yn = v => v ? `<span style="color:var(--green)">✓</span>` : `<span style="color:var(--bg4)">✗</span>`;
-
-function barList(items, maxVal) {
-  const mx = maxVal || Math.max(...items.map(i => i.v), 1);
-  return '<div class="blist">' + items.map(i => {
-    const pct = mx > 0 ? Math.min(i.v / mx * 100, 100) : 0;
-    const disp = i.fmt !== undefined ? i.fmt : (typeof i.v === 'number' ? i.v.toLocaleString('fr-FR') : i.v);
-    return `<div class="brow">
+    function barList(items, maxVal) {
+      const mx = maxVal || Math.max(...items.map(i => i.v), 1);
+      return '<div class="blist">' + items.map(i => {
+        const pct = mx > 0 ? Math.min(i.v / mx * 100, 100) : 0;
+        const disp = i.fmt !== undefined ? i.fmt : (typeof i.v === 'number' ? i.v.toLocaleString('fr-FR') : i.v);
+        return `<div class="brow">
       <div class="blabel" title="${i.l}">${i.l}</div>
       <div class="btrack"><div class="bfill" style="width:${pct}%;background:${i.c}"></div></div>
       <div class="bnum">${disp}</div>
     </div>`;
-  }).join('') + '</div>';
-}
+      }).join('') + '</div>';
+    }
 
-function kpiCard(label, value, sub, cls='', color='') {
-  return `<div class="card ${cls}">
+    function kpiCard(label, value, sub, cls = '', color = '') {
+      return `<div class="card ${cls}">
     <div class="kpi-label">${label}</div>
     <div class="kpi-value ${color}">${value}</div>
     <div class="kpi-sub">${sub}</div>
   </div>`;
-}
+    }
 
-function showPane(id, btn) {
-  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('pane-' + id).classList.add('active');
-  if (btn) btn.classList.add('active');
-}
+    function showPane(id, btn) {
+      document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('pane-' + id).classList.add('active');
+      if (btn) btn.classList.add('active');
+    }
 
-// ════════════════════════ INIT ALL ════════════════════════
-function initAll() {
-  updateStatusBar();
-  buildOverview();
-  buildSteps();
-  buildRequests();
-  buildWaterfall();
-  buildAllFeatures();
-  applyFilters();
-}
+    // ════════════════════════ INIT ALL ════════════════════════
+    function initAll() {
+      updateStatusBar();
+      buildOverview();
+      buildSteps();
+      buildRequests();
+      buildWaterfall();
+      buildAllFeatures();
+      applyFilters();
+    }
 
-// ════════════════════════ STATUS BAR ════════════════════════
-function updateStatusBar() {
-  const fail = n(SC.scenario_failure_rate_pct);
-  const dot = document.getElementById('top-dot');
-  const lbl = document.getElementById('top-label');
-  const box = document.getElementById('top-status');
-  if (fail > 5) {
-    dot.style.background = lbl.style.color = 'var(--red)';
-    lbl.textContent = '⚠ INCIDENT POTENTIEL';
-    box.style.borderColor = 'rgba(239,68,68,.3)';
-  } else if (fail > 0) {
-    dot.style.background = lbl.style.color = 'var(--amber)';
-    lbl.textContent = '⚠ DÉGRADÉ';
-    box.style.borderColor = 'rgba(245,158,11,.3)';
-  } else {
-    dot.style.background = lbl.style.color = 'var(--green)';
-    lbl.textContent = '✓ NOMINAL';
-    box.style.borderColor = 'rgba(16,185,129,.25)';
-  }
-}
+    // ════════════════════════ STATUS BAR ════════════════════════
+    function updateStatusBar() {
+      const fail = n(SC.scenario_failure_rate_pct);
+      const dot = document.getElementById('top-dot');
+      const lbl = document.getElementById('top-label');
+      const box = document.getElementById('top-status');
+      if (fail > 5) {
+        dot.style.background = lbl.style.color = 'var(--red)';
+        lbl.textContent = '⚠ INCIDENT POTENTIEL';
+        box.style.borderColor = 'rgba(239,68,68,.3)';
+      } else if (fail > 0) {
+        dot.style.background = lbl.style.color = 'var(--amber)';
+        lbl.textContent = '⚠ DÉGRADÉ';
+        box.style.borderColor = 'rgba(245,158,11,.3)';
+      } else {
+        dot.style.background = lbl.style.color = 'var(--green)';
+        lbl.textContent = '✓ NOMINAL';
+        box.style.borderColor = 'rgba(16,185,129,.25)';
+      }
+    }
 
-// ════════════════════════ OVERVIEW ════════════════════════
-function buildOverview() {
-  const fail = n(SC.scenario_failure_rate_pct);
+    // ════════════════════════ OVERVIEW ════════════════════════
+    function buildOverview() {
+      const fail = n(SC.scenario_failure_rate_pct);
 
-  document.getElementById('main-kpis').innerHTML = [
-    kpiCard('Requêtes totales', fmt(SC.scenario_total_requests), n(SC.scenario_nb_steps) + ' steps · ' + n(SC.scenario_duration_sec).toFixed(2) + 's', 'card-accent', 'kv-amber'),
-    kpiCard('Taux d\'échec', fmtPct(SC.scenario_failure_rate_pct), n(SC.scenario_total_failed) + ' req échouées (4xx+5xx+0)', fail > 0 ? 'card-red' : 'card-green', fail > 0 ? 'kv-red' : 'kv-green'),
-    kpiCard('TTFB moyen', n(SC.scenario_ttfb_ms_mean).toFixed(1) + ' ms', 'P95: ' + n(SC.scenario_ttfb_ms_p95).toFixed(0) + ' ms  Max: ' + n(SC.scenario_ttfb_ms_max).toFixed(0) + ' ms', 'card-cyan', 'kv-cyan'),
-    kpiCard('Durée scénario', n(SC.scenario_duration_sec).toFixed(2) + 's', 'Page load 1er step: ' + n(SC.scenario_page_load_ms).toFixed(0) + ' ms', '', 'kv-amber'),
-    kpiCard('Timeouts (status 0)', fmt(SC.scenario_timeout_count), '4xx: ' + n(SC.scenario_4xx_count) + '  5xx: ' + n(SC.scenario_5xx_count), n(SC.scenario_timeout_count) > 0 ? 'card-red' : '', n(SC.scenario_timeout_count) > 0 ? 'kv-red' : 'kv-green'),
-    kpiCard('Cache 304', fmt(SC.scenario_cache_hit_304), fmtPct(SC.scenario_cache_hit_pct) + ' taux de cache hit', 'card-green', 'kv-green'),
-    kpiCard('Compression', fmtPct(SC.scenario_compression_pct), fmtB(SC.scenario_comp_saved_bytes) + ' économisés', '', 'kv-amber'),
-    kpiCard('Conn. TCP réutilisées', fmt(SC.scenario_connection_reused), fmtPct(SC.scenario_connection_reuse_pct) + ' du total', 'card-green', 'kv-green'),
-  ].join('');
+      document.getElementById('main-kpis').innerHTML = [
+        kpiCard('Requêtes totales', fmt(SC.scenario_total_requests), n(SC.scenario_nb_steps) + ' steps · ' + n(SC.scenario_duration_sec).toFixed(2) + 's', 'card-accent', 'kv-amber'),
+        kpiCard('Taux d\'échec', fmtPct(SC.scenario_failure_rate_pct), n(SC.scenario_total_failed) + ' req échouées (4xx+5xx+0)', fail > 0 ? 'card-red' : 'card-green', fail > 0 ? 'kv-red' : 'kv-green'),
+        kpiCard('TTFB moyen', n(SC.scenario_ttfb_ms_mean).toFixed(1) + ' ms', 'P95: ' + n(SC.scenario_ttfb_ms_p95).toFixed(0) + ' ms  Max: ' + n(SC.scenario_ttfb_ms_max).toFixed(0) + ' ms', 'card-cyan', 'kv-cyan'),
+        kpiCard('Durée scénario', n(SC.scenario_duration_sec).toFixed(2) + 's', 'Page load 1er step: ' + n(SC.scenario_page_load_ms).toFixed(0) + ' ms', '', 'kv-amber'),
+        kpiCard('Timeouts (status 0)', fmt(SC.scenario_timeout_count), '4xx: ' + n(SC.scenario_4xx_count) + '  5xx: ' + n(SC.scenario_5xx_count), n(SC.scenario_timeout_count) > 0 ? 'card-red' : '', n(SC.scenario_timeout_count) > 0 ? 'kv-red' : 'kv-green'),
+        kpiCard('Cache 304', fmt(SC.scenario_cache_hit_304), fmtPct(SC.scenario_cache_hit_pct) + ' taux de cache hit', 'card-green', 'kv-green'),
+        kpiCard('Compression', fmtPct(SC.scenario_compression_pct), fmtB(SC.scenario_comp_saved_bytes) + ' économisés', '', 'kv-amber'),
+        kpiCard('Conn. TCP réutilisées', fmt(SC.scenario_connection_reused), fmtPct(SC.scenario_connection_reuse_pct) + ' du total', 'card-green', 'kv-green'),
+      ].join('');
 
-  // Donut
-  const types = [
-    {n:'Script JS', v:n(SC.scenario_script_count), c:'#f59e0b'},
-    {n:'Stylesheet', v:n(SC.scenario_stylesheet_count), c:'#a78bfa'},
-    {n:'Image', v:n(SC.scenario_image_count), c:'#f87171'},
-    {n:'Document', v:n(SC.scenario_document_count), c:'#22d3ee'},
-    {n:'Fetch/XHR', v:n(SC.scenario_fetch_xhr_count), c:'#10b981'},
-    {n:'Font', v:n(SC.scenario_font_count), c:'#3b82f6'},
-    {n:'Other', v:n(SC.scenario_other_count), c:'#374151'},
-  ].filter(t => t.v > 0);
-  const tot = types.reduce((s,t) => s + t.v, 0);
-  const R = 54, cx = 64, cy = 64, circ = 2 * Math.PI * R;
-  let off = 0;
-  const segs = types.map(t => {
-    const d = t.v / tot * circ;
-    const s = `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${t.c}" stroke-width="16"
-      stroke-dasharray="${d} ${circ-d}" stroke-dashoffset="${-off}"/>`;
-    off += d; return s;
-  }).join('');
-  document.getElementById('donut-wrap').innerHTML = `<div class="donut-wrap">
+      // Donut
+      const types = [
+        { n: 'Script JS', v: n(SC.scenario_script_count), c: '#f59e0b' },
+        { n: 'Stylesheet', v: n(SC.scenario_stylesheet_count), c: '#a78bfa' },
+        { n: 'Image', v: n(SC.scenario_image_count), c: '#f87171' },
+        { n: 'Document', v: n(SC.scenario_document_count), c: '#22d3ee' },
+        { n: 'Fetch/XHR', v: n(SC.scenario_fetch_xhr_count), c: '#10b981' },
+        { n: 'Font', v: n(SC.scenario_font_count), c: '#3b82f6' },
+        { n: 'Other', v: n(SC.scenario_other_count), c: '#374151' },
+      ].filter(t => t.v > 0);
+      const tot = types.reduce((s, t) => s + t.v, 0);
+      const R = 54, cx = 64, cy = 64, circ = 2 * Math.PI * R;
+      let off = 0;
+      const segs = types.map(t => {
+        const d = t.v / tot * circ;
+        const s = `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${t.c}" stroke-width="16"
+      stroke-dasharray="${d} ${circ - d}" stroke-dashoffset="${-off}"/>`;
+        off += d; return s;
+      }).join('');
+      document.getElementById('donut-wrap').innerHTML = `<div class="donut-wrap">
     <div class="donut-svg-wrap" style="width:128px;height:128px;flex-shrink:0">
       <svg class="donut" width="128" height="128" viewBox="0 0 128 128">${segs}</svg>
       <div class="donut-center">
@@ -695,93 +1560,93 @@ function buildOverview() {
       </div>
     </div>
     <div class="donut-legend">${types.map(t =>
-      `<div class="dl-row"><div class="dl-dot" style="background:${t.c}"></div>
+        `<div class="dl-row"><div class="dl-dot" style="background:${t.c}"></div>
       <div class="dl-name">${t.n}</div>
-      <div class="dl-val" style="color:${t.c}">${t.v} <span style="color:var(--muted);font-weight:400">(${(t.v/tot*100).toFixed(0)}%)</span></div></div>`
-    ).join('')}</div>
+      <div class="dl-val" style="color:${t.c}">${t.v} <span style="color:var(--muted);font-weight:400">(${(t.v / tot * 100).toFixed(0)}%)</span></div></div>`
+      ).join('')}</div>
   </div>`;
 
-  document.getElementById('http-bars').innerHTML = barList([
-    {l:'2xx Succès',       v:n(SC.scenario_2xx_count),      c:'var(--green)'},
-    {l:'3xx Redirection',  v:n(SC.scenario_3xx_count),      c:'var(--amber)'},
-    {l:'4xx Erreur client',v:n(SC.scenario_4xx_count),      c:'var(--orange)'},
-    {l:'5xx Erreur serveur',v:n(SC.scenario_5xx_count),     c:'var(--red)'},
-    {l:'0 Timeout/Failed', v:n(SC.scenario_0_failed_count), c:'var(--purple)'},
-  ]);
+      document.getElementById('http-bars').innerHTML = barList([
+        { l: '2xx Succès', v: n(SC.scenario_2xx_count), c: 'var(--green)' },
+        { l: '3xx Redirection', v: n(SC.scenario_3xx_count), c: 'var(--amber)' },
+        { l: '4xx Erreur client', v: n(SC.scenario_4xx_count), c: 'var(--orange)' },
+        { l: '5xx Erreur serveur', v: n(SC.scenario_5xx_count), c: 'var(--red)' },
+        { l: '0 Timeout/Failed', v: n(SC.scenario_0_failed_count), c: 'var(--purple)' },
+      ]);
 
-  document.getElementById('timing-kpis').innerHTML = [
-    kpiCard('TTFB Mean', n(SC.scenario_ttfb_ms_mean).toFixed(1)+' ms', 'Median: '+n(SC.scenario_ttfb_ms_median).toFixed(1)+' ms', '', 'kv-amber'),
-    kpiCard('TTFB P95', n(SC.scenario_ttfb_ms_p95).toFixed(1)+' ms', 'P99: '+n(SC.scenario_ttfb_ms_p99).toFixed(1)+' ms · Max: '+n(SC.scenario_ttfb_ms_max).toFixed(0)+' ms', '', 'kv-orange'),
-    kpiCard('Req. Totale Mean', n(SC.scenario_req_time_ms_mean).toFixed(1)+' ms', 'P95: '+n(SC.scenario_req_time_ms_p95).toFixed(1)+' ms', 'card-cyan', 'kv-cyan'),
-    kpiCard('Req. Totale Max', n(SC.scenario_req_time_ms_max).toFixed(0)+' ms', 'P99: '+n(SC.scenario_req_time_ms_p99).toFixed(1)+' ms', '', 'kv-red'),
-    kpiCard('Blocked Mean', n(SC.scenario_blocked_ms_mean).toFixed(1)+' ms', 'P95: '+n(SC.scenario_blocked_ms_p95).toFixed(0)+' ms', '', 'kv-purple'),
-    kpiCard('Connect Mean', n(SC.scenario_connect_ms_mean).toFixed(1)+' ms', 'P95: '+n(SC.scenario_connect_ms_p95).toFixed(0)+' ms', '', ''),
-    kpiCard('SSL/TLS Mean', n(SC.scenario_ssl_ms_mean).toFixed(1)+' ms', 'Max: '+n(SC.scenario_ssl_ms_max).toFixed(0)+' ms', '', 'kv-purple'),
-    kpiCard('Receive Mean', n(SC.scenario_receive_ms_mean).toFixed(1)+' ms', 'P95: '+n(SC.scenario_receive_ms_p95).toFixed(0)+' ms', '', 'kv-green'),
-  ].join('');
+      document.getElementById('timing-kpis').innerHTML = [
+        kpiCard('TTFB Mean', n(SC.scenario_ttfb_ms_mean).toFixed(1) + ' ms', 'Median: ' + n(SC.scenario_ttfb_ms_median).toFixed(1) + ' ms', '', 'kv-amber'),
+        kpiCard('TTFB P95', n(SC.scenario_ttfb_ms_p95).toFixed(1) + ' ms', 'P99: ' + n(SC.scenario_ttfb_ms_p99).toFixed(1) + ' ms · Max: ' + n(SC.scenario_ttfb_ms_max).toFixed(0) + ' ms', '', 'kv-orange'),
+        kpiCard('Req. Totale Mean', n(SC.scenario_req_time_ms_mean).toFixed(1) + ' ms', 'P95: ' + n(SC.scenario_req_time_ms_p95).toFixed(1) + ' ms', 'card-cyan', 'kv-cyan'),
+        kpiCard('Req. Totale Max', n(SC.scenario_req_time_ms_max).toFixed(0) + ' ms', 'P99: ' + n(SC.scenario_req_time_ms_p99).toFixed(1) + ' ms', '', 'kv-red'),
+        kpiCard('Blocked Mean', n(SC.scenario_blocked_ms_mean).toFixed(1) + ' ms', 'P95: ' + n(SC.scenario_blocked_ms_p95).toFixed(0) + ' ms', '', 'kv-purple'),
+        kpiCard('Connect Mean', n(SC.scenario_connect_ms_mean).toFixed(1) + ' ms', 'P95: ' + n(SC.scenario_connect_ms_p95).toFixed(0) + ' ms', '', ''),
+        kpiCard('SSL/TLS Mean', n(SC.scenario_ssl_ms_mean).toFixed(1) + ' ms', 'Max: ' + n(SC.scenario_ssl_ms_max).toFixed(0) + ' ms', '', 'kv-purple'),
+        kpiCard('Receive Mean', n(SC.scenario_receive_ms_mean).toFixed(1) + ' ms', 'P95: ' + n(SC.scenario_receive_ms_p95).toFixed(0) + ' ms', '', 'kv-green'),
+      ].join('');
 
-  document.getElementById('network-bars').innerHTML = barList([
-    {l:'HTTP/1.x', v:n(SC.scenario_http1_count), c:'var(--cyan)'},
-    {l:'HTTP/2', v:n(SC.scenario_http2_count), c:'var(--green)'},
-    {l:'HTTP/3', v:n(SC.scenario_http3_count), c:'var(--amber)'},
-    {l:'HTTPS sécurisé', v:n(SC.scenario_https_count), c:'var(--green)'},
-    {l:'HTTP insécurisé', v:n(SC.scenario_http_insecure), c:'var(--red)'},
-    {l:'Connexions réutilisées', v:n(SC.scenario_connection_reused), c:'var(--cyan)'},
-    {l:'DNS en cache (<1ms)', v:n(SC.scenario_dns_cached_count), c:'var(--green)'},
-    {l:'Domaines uniques', v:n(SC.scenario_unique_domains), c:'var(--amber)'},
-    {l:'IPs serveurs uniques', v:n(SC.scenario_unique_ips), c:'var(--orange)'},
-    {l:'Connexions TCP uniques', v:n(SC.scenario_unique_connections), c:'var(--purple)'},
-    {l:'3rd party requêtes', v:n(SC.scenario_third_party_count), c:'var(--orange)'},
-    {l:'3rd party en échec', v:n(SC.scenario_third_party_failed), c:'var(--red)'},
-    {l:'Erreurs DNS', v:n(SC.scenario_dns_error_count), c:'var(--red)'},
-    {l:'Erreurs SSL', v:n(SC.scenario_ssl_error_count), c:'var(--red)'},
-  ]);
+      document.getElementById('network-bars').innerHTML = barList([
+        { l: 'HTTP/1.x', v: n(SC.scenario_http1_count), c: 'var(--cyan)' },
+        { l: 'HTTP/2', v: n(SC.scenario_http2_count), c: 'var(--green)' },
+        { l: 'HTTP/3', v: n(SC.scenario_http3_count), c: 'var(--amber)' },
+        { l: 'HTTPS sécurisé', v: n(SC.scenario_https_count), c: 'var(--green)' },
+        { l: 'HTTP insécurisé', v: n(SC.scenario_http_insecure), c: 'var(--red)' },
+        { l: 'Connexions réutilisées', v: n(SC.scenario_connection_reused), c: 'var(--cyan)' },
+        { l: 'DNS en cache (<1ms)', v: n(SC.scenario_dns_cached_count), c: 'var(--green)' },
+        { l: 'Domaines uniques', v: n(SC.scenario_unique_domains), c: 'var(--amber)' },
+        { l: 'IPs serveurs uniques', v: n(SC.scenario_unique_ips), c: 'var(--orange)' },
+        { l: 'Connexions TCP uniques', v: n(SC.scenario_unique_connections), c: 'var(--purple)' },
+        { l: '3rd party requêtes', v: n(SC.scenario_third_party_count), c: 'var(--orange)' },
+        { l: '3rd party en échec', v: n(SC.scenario_third_party_failed), c: 'var(--red)' },
+        { l: 'Erreurs DNS', v: n(SC.scenario_dns_error_count), c: 'var(--red)' },
+        { l: 'Erreurs SSL', v: n(SC.scenario_ssl_error_count), c: 'var(--red)' },
+      ]);
 
-  document.getElementById('volume-bars').innerHTML = barList([
-    {l:'JS (décompressé)', v:n(SC.scenario_js_bytes), c:'var(--amber)', fmt:fmtB(SC.scenario_js_bytes)},
-    {l:'Fetch/XHR', v:n(SC.scenario_fetch_bytes), c:'var(--green)', fmt:fmtB(SC.scenario_fetch_bytes)},
-    {l:'CSS', v:n(SC.scenario_css_bytes), c:'var(--purple)', fmt:fmtB(SC.scenario_css_bytes)},
-    {l:'Image', v:n(SC.scenario_image_bytes), c:'#f87171', fmt:fmtB(SC.scenario_image_bytes)},
-    {l:'HTML/Document', v:n(SC.scenario_html_bytes), c:'var(--cyan)', fmt:fmtB(SC.scenario_html_bytes)},
-    {l:'Font', v:n(SC.scenario_font_bytes), c:'var(--blue)', fmt:fmtB(SC.scenario_font_bytes)},
-    {l:'Total téléchargé (body)', v:n(SC.scenario_bytes_downloaded), c:'var(--dim)', fmt:fmtB(SC.scenario_bytes_downloaded)},
-    {l:'Total uploadé (body)', v:n(SC.scenario_bytes_uploaded), c:'var(--orange)', fmt:fmtB(SC.scenario_bytes_uploaded)},
-    {l:'Transfer size (réseau)', v:n(SC.scenario_transfer_bytes), c:'var(--muted)', fmt:fmtB(SC.scenario_transfer_bytes)},
-    {l:'Content size (décompressé)', v:n(SC.scenario_content_bytes), c:'var(--muted)', fmt:fmtB(SC.scenario_content_bytes)},
-  ]);
+      document.getElementById('volume-bars').innerHTML = barList([
+        { l: 'JS (décompressé)', v: n(SC.scenario_js_bytes), c: 'var(--amber)', fmt: fmtB(SC.scenario_js_bytes) },
+        { l: 'Fetch/XHR', v: n(SC.scenario_fetch_bytes), c: 'var(--green)', fmt: fmtB(SC.scenario_fetch_bytes) },
+        { l: 'CSS', v: n(SC.scenario_css_bytes), c: 'var(--purple)', fmt: fmtB(SC.scenario_css_bytes) },
+        { l: 'Image', v: n(SC.scenario_image_bytes), c: '#f87171', fmt: fmtB(SC.scenario_image_bytes) },
+        { l: 'HTML/Document', v: n(SC.scenario_html_bytes), c: 'var(--cyan)', fmt: fmtB(SC.scenario_html_bytes) },
+        { l: 'Font', v: n(SC.scenario_font_bytes), c: 'var(--blue)', fmt: fmtB(SC.scenario_font_bytes) },
+        { l: 'Total téléchargé (body)', v: n(SC.scenario_bytes_downloaded), c: 'var(--dim)', fmt: fmtB(SC.scenario_bytes_downloaded) },
+        { l: 'Total uploadé (body)', v: n(SC.scenario_bytes_uploaded), c: 'var(--orange)', fmt: fmtB(SC.scenario_bytes_uploaded) },
+        { l: 'Transfer size (réseau)', v: n(SC.scenario_transfer_bytes), c: 'var(--muted)', fmt: fmtB(SC.scenario_transfer_bytes) },
+        { l: 'Content size (décompressé)', v: n(SC.scenario_content_bytes), c: 'var(--muted)', fmt: fmtB(SC.scenario_content_bytes) },
+      ]);
 
-  document.getElementById('security-bars').innerHTML = barList([
-    {l:'HSTS activé', v:n(SC.scenario_with_hsts), c:'var(--green)'},
-    {l:'CSP activé', v:n(SC.scenario_with_csp), c:'var(--green)'},
-    {l:'ETag présent', v:n(SC.scenario_with_etag), c:'var(--cyan)'},
-    {l:'CORS activé', v:n(SC.scenario_with_cors), c:'var(--amber)'},
-    {l:'Avec Referer', v:n(SC.scenario_with_referer), c:'var(--dim)'},
-    {l:'Avec Authorization', v:n(SC.scenario_with_auth), c:'var(--orange)'},
-    {l:'Avec API Key (x-api-key)', v:n(SC.scenario_with_api_key), c:'var(--orange)'},
-    {l:'Endpoints API', v:n(SC.scenario_api_count), c:'var(--purple)'},
-    {l:'Requêtes POST', v:n(SC.scenario_post_requests), c:'var(--amber)'},
-    {l:'Redirections', v:n(SC.scenario_redirects_count), c:'var(--dim)'},
-  ]);
+      document.getElementById('security-bars').innerHTML = barList([
+        { l: 'HSTS activé', v: n(SC.scenario_with_hsts), c: 'var(--green)' },
+        { l: 'CSP activé', v: n(SC.scenario_with_csp), c: 'var(--green)' },
+        { l: 'ETag présent', v: n(SC.scenario_with_etag), c: 'var(--cyan)' },
+        { l: 'CORS activé', v: n(SC.scenario_with_cors), c: 'var(--amber)' },
+        { l: 'Avec Referer', v: n(SC.scenario_with_referer), c: 'var(--dim)' },
+        { l: 'Avec Authorization', v: n(SC.scenario_with_auth), c: 'var(--orange)' },
+        { l: 'Avec API Key (x-api-key)', v: n(SC.scenario_with_api_key), c: 'var(--orange)' },
+        { l: 'Endpoints API', v: n(SC.scenario_api_count), c: 'var(--purple)' },
+        { l: 'Requêtes POST', v: n(SC.scenario_post_requests), c: 'var(--amber)' },
+        { l: 'Redirections', v: n(SC.scenario_redirects_count), c: 'var(--dim)' },
+      ]);
 
-  document.getElementById('cache-bars').innerHTML = barList([
-    {l:'Réponses compressées', v:n(SC.scenario_compressed_count), c:'var(--green)'},
-    {l:'Gzip', v:n(SC.scenario_gzip_count), c:'var(--cyan)'},
-    {l:'Brotli (br)', v:n(SC.scenario_br_count), c:'var(--cyan)'},
-    {l:'Cache hits (304)', v:n(SC.scenario_cache_hit_304), c:'var(--green)'},
-    {l:'Réponses avec body', v:REQS.filter(r=>r.response_has_body).length, c:'var(--dim)'},
-    {l:'Avec Last-Modified', v:REQS.filter(r=>r.response_has_last_modified).length, c:'var(--amber)'},
-    {l:'Cache no-store', v:REQS.filter(r=>r.response_cache_no_store).length, c:'var(--red)'},
-    {l:'Cache private', v:REQS.filter(r=>r.response_cache_is_private).length, c:'var(--orange)'},
-    {l:'Cache public', v:REQS.filter(r=>r.response_cache_is_public).length, c:'var(--green)'},
-    {l:'Réponses avec texte (body text)', v:n(SC.scenario_responses_with_text), c:'var(--dim)'},
-  ]);
-}
+      document.getElementById('cache-bars').innerHTML = barList([
+        { l: 'Réponses compressées', v: n(SC.scenario_compressed_count), c: 'var(--green)' },
+        { l: 'Gzip', v: n(SC.scenario_gzip_count), c: 'var(--cyan)' },
+        { l: 'Brotli (br)', v: n(SC.scenario_br_count), c: 'var(--cyan)' },
+        { l: 'Cache hits (304)', v: n(SC.scenario_cache_hit_304), c: 'var(--green)' },
+        { l: 'Réponses avec body', v: REQS.filter(r => r.response_has_body).length, c: 'var(--dim)' },
+        { l: 'Avec Last-Modified', v: REQS.filter(r => r.response_has_last_modified).length, c: 'var(--amber)' },
+        { l: 'Cache no-store', v: REQS.filter(r => r.response_cache_no_store).length, c: 'var(--red)' },
+        { l: 'Cache private', v: REQS.filter(r => r.response_cache_is_private).length, c: 'var(--orange)' },
+        { l: 'Cache public', v: REQS.filter(r => r.response_cache_is_public).length, c: 'var(--green)' },
+        { l: 'Réponses avec texte (body text)', v: n(SC.scenario_responses_with_text), c: 'var(--dim)' },
+      ]);
+    }
 
-// ════════════════════════ STEPS ════════════════════════
-function buildSteps() {
-  document.getElementById('step-cards').innerHTML = STEPS.map(s => {
-    const hasErr = s.step_total_failed > 0;
-    return `<div class="step-card ${hasErr ? 'has-err' : 'all-ok'}">
+    // ════════════════════════ STEPS ════════════════════════
+    function buildSteps() {
+      document.getElementById('step-cards').innerHTML = STEPS.map(s => {
+        const hasErr = s.step_total_failed > 0;
+        return `<div class="step-card ${hasErr ? 'has-err' : 'all-ok'}">
       <div class="step-hdr">
         <div>
           <div class="step-num">STEP ${s.step_index} · ${s.step_request_count} requêtes</div>
@@ -790,12 +1655,12 @@ function buildSteps() {
         <div class="step-badge ${hasErr ? 'badge-err' : 'badge-ok'}">${hasErr ? s.step_total_failed + ' ERR' : 'OK'}</div>
       </div>
       <div class="step-stats">
-        <div class="ss-row"><span class="ss-key">Taux d'échec</span><span class="ss-val" style="color:${s.step_failure_rate_pct>0?'var(--red)':'var(--green)'}">${n(s.step_failure_rate_pct).toFixed(1)}%</span></div>
+        <div class="ss-row"><span class="ss-key">Taux d'échec</span><span class="ss-val" style="color:${s.step_failure_rate_pct > 0 ? 'var(--red)' : 'var(--green)'}">${n(s.step_failure_rate_pct).toFixed(1)}%</span></div>
         <div class="ss-row"><span class="ss-key">TTFB mean</span><span class="ss-val">${n(s.step_ttfb_mean_ms).toFixed(1)} ms</span></div>
         <div class="ss-row"><span class="ss-key">TTFB P95</span><span class="ss-val">${n(s.step_ttfb_p95_ms).toFixed(1)} ms</span></div>
         <div class="ss-row"><span class="ss-key">Req. time mean</span><span class="ss-val">${n(s.step_time_mean_ms).toFixed(1)} ms</span></div>
-        <div class="ss-row"><span class="ss-key">Req. time max</span><span class="ss-val" style="color:${s.step_time_max_ms>1000?'var(--red)':'inherit'}">${n(s.step_time_max_ms).toFixed(0)} ms</span></div>
-        <div class="ss-row"><span class="ss-key">Page load</span><span class="ss-val">${s.step_page_load_complete_ms > 0 ? n(s.step_page_load_complete_ms).toFixed(0)+' ms' : '—'}</span></div>
+        <div class="ss-row"><span class="ss-key">Req. time max</span><span class="ss-val" style="color:${s.step_time_max_ms > 1000 ? 'var(--red)' : 'inherit'}">${n(s.step_time_max_ms).toFixed(0)} ms</span></div>
+        <div class="ss-row"><span class="ss-key">Page load</span><span class="ss-val">${s.step_page_load_complete_ms > 0 ? n(s.step_page_load_complete_ms).toFixed(0) + ' ms' : '—'}</span></div>
         <div class="ss-row"><span class="ss-key">Cache hits 304</span><span class="ss-val" style="color:var(--green)">${s.step_cache_hit_304}</span></div>
         <div class="ss-row"><span class="ss-key">Cache rate</span><span class="ss-val">${n(s.step_cache_hit_rate_pct).toFixed(1)}%</span></div>
         <div class="ss-row"><span class="ss-key">3rd party</span><span class="ss-val">${s.step_third_party_count} (${n(s.step_third_party_pct).toFixed(0)}%)</span></div>
@@ -810,104 +1675,104 @@ function buildSteps() {
         <div class="ss-row"><span class="ss-key">Endpoints API</span><span class="ss-val">${s.step_api_count}</span></div>
         <div class="ss-row"><span class="ss-key">Redirections</span><span class="ss-val">${s.step_redirects_count}</span></div>
         <div class="ss-row"><span class="ss-key">HSTS</span><span class="ss-val">${s.step_with_hsts}</span></div>
-        <div class="ss-row"><span class="ss-key">Timeouts</span><span class="ss-val" style="color:${s.step_timeout_count>0?'var(--red)':'inherit'}">${s.step_timeout_count}</span></div>
-        <div class="ss-row"><span class="ss-key">Slow (>5s)</span><span class="ss-val" style="color:${s.step_slow_count>0?'var(--red)':'inherit'}">${s.step_slow_count}</span></div>
+        <div class="ss-row"><span class="ss-key">Timeouts</span><span class="ss-val" style="color:${s.step_timeout_count > 0 ? 'var(--red)' : 'inherit'}">${s.step_timeout_count}</span></div>
+        <div class="ss-row"><span class="ss-key">Slow (>5s)</span><span class="ss-val" style="color:${s.step_slow_count > 0 ? 'var(--red)' : 'inherit'}">${s.step_slow_count}</span></div>
       </div>
     </div>`;
-  }).join('');
+      }).join('');
 
-  const mk = (stps, key, fmtFn, color) => {
-    const mx = Math.max(...stps.map(s=>n(s[key])), 0.001);
-    return barList(stps.map(s => ({l:`Step ${s.step_index} – ${s.step_title||'…'} (${s.step_request_count} req)`, v:n(s[key]), c:color, fmt:fmtFn(n(s[key]))})), mx);
-  };
-  document.getElementById('step-ttfb-bar').innerHTML = mk(STEPS, 'step_ttfb_mean_ms', v=>v.toFixed(1)+' ms', 'var(--amber)');
-  document.getElementById('step-time-bar').innerHTML = mk(STEPS, 'step_time_mean_ms', v=>v.toFixed(1)+' ms', 'var(--cyan)');
-  document.getElementById('step-bytes-bar').innerHTML = mk(STEPS, 'step_bytes_downloaded', fmtB, 'var(--purple)');
+      const mk = (stps, key, fmtFn, color) => {
+        const mx = Math.max(...stps.map(s => n(s[key])), 0.001);
+        return barList(stps.map(s => ({ l: `Step ${s.step_index} – ${s.step_title || '…'} (${s.step_request_count} req)`, v: n(s[key]), c: color, fmt: fmtFn(n(s[key])) })), mx);
+      };
+      document.getElementById('step-ttfb-bar').innerHTML = mk(STEPS, 'step_ttfb_mean_ms', v => v.toFixed(1) + ' ms', 'var(--amber)');
+      document.getElementById('step-time-bar').innerHTML = mk(STEPS, 'step_time_mean_ms', v => v.toFixed(1) + ' ms', 'var(--cyan)');
+      document.getElementById('step-bytes-bar').innerHTML = mk(STEPS, 'step_bytes_downloaded', fmtB, 'var(--purple)');
 
-  const t2keys = Object.keys(STEPS[0]).filter(k => !['scenario_id','step_id'].includes(k));
-  document.getElementById('t2-feat-count').textContent = t2keys.length;
-  const thead = `<thead><tr><th>Feature</th>${STEPS.map(s=>`<th>Step ${s.step_index} · ${s.step_title}</th>`).join('')}</tr></thead>`;
-  const tbody = '<tbody>' + t2keys.map(k => {
-    const cells = STEPS.map(s => {
-      const v = s[k];
-      if (v === null || v === undefined) return `<td class="v-null">—</td>`;
-      if (typeof v === 'number') {
-        if (v === 0) return `<td class="v-zero">0</td>`;
-        return `<td>${Number.isInteger(v)?v.toLocaleString('fr-FR'):v.toFixed(4)}</td>`;
-      }
-      return `<td>${String(v).substring(0,60)}</td>`;
-    }).join('');
-    return `<tr><td style="color:var(--dim);font-size:9px">${k}</td>${cells}</tr>`;
-  }).join('') + '</tbody>';
-  document.getElementById('steps-table').innerHTML = thead + tbody;
-}
-
-// ════════════════════════ REQUESTS ════════════════════════
-function buildRequests() {
-  const stepSel = document.getElementById('r-step');
-  stepSel.innerHTML = '<option value="">Tous les steps</option>';
-  [...new Set(REQS.map(r=>r.request_step_name).filter(Boolean))].sort().forEach(s => {
-    const o = document.createElement('option'); o.value = s; o.textContent = s; stepSel.appendChild(o);
-  });
-}
-
-function applyFilters() {
-  const q = document.getElementById('r-search').value.toLowerCase();
-  const step = document.getElementById('r-step').value;
-  const stat = document.getElementById('r-status').value;
-  const type = document.getElementById('r-type').value;
-  const party = document.getElementById('r-party').value;
-  const errOnly = document.getElementById('r-err').value;
-  filtered = REQS.filter(r => {
-    if (q && !(r.request_url||'').toLowerCase().includes(q) && !(r.request_domain||'').toLowerCase().includes(q) && !(r.request_resource_type||'').toLowerCase().includes(q)) return false;
-    if (step && r.request_step_name !== step) return false;
-    if (type && r.request_resource_type !== type) return false;
-    if (party !== '' && String(r.request_is_third_party) !== party) return false;
-    if (errOnly === '1' && !r.response_is_error) return false;
-    if (stat) {
-      const s = r.response_status || 0;
-      if (stat==='2' && !(s>=200&&s<300)) return false;
-      if (stat==='3' && !(s>=300&&s<400)) return false;
-      if (stat==='4' && !(s>=400&&s<500)) return false;
-      if (stat==='5' && !(s>=500&&s<600)) return false;
-      if (stat==='0' && s!==0) return false;
+      const t2keys = Object.keys(STEPS[0]).filter(k => !['scenario_id', 'step_id'].includes(k));
+      document.getElementById('t2-feat-count').textContent = t2keys.length;
+      const thead = `<thead><tr><th>Feature</th>${STEPS.map(s => `<th>Step ${s.step_index} · ${s.step_title}</th>`).join('')}</tr></thead>`;
+      const tbody = '<tbody>' + t2keys.map(k => {
+        const cells = STEPS.map(s => {
+          const v = s[k];
+          if (v === null || v === undefined) return `<td class="v-null">—</td>`;
+          if (typeof v === 'number') {
+            if (v === 0) return `<td class="v-zero">0</td>`;
+            return `<td>${Number.isInteger(v) ? v.toLocaleString('fr-FR') : v.toFixed(4)}</td>`;
+          }
+          return `<td>${String(v).substring(0, 60)}</td>`;
+        }).join('');
+        return `<tr><td style="color:var(--dim);font-size:9px">${k}</td>${cells}</tr>`;
+      }).join('') + '</tbody>';
+      document.getElementById('steps-table').innerHTML = thead + tbody;
     }
-    return true;
-  });
-  curPage = 1; renderReqs();
-}
 
-function sortBy(key) {
-  if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; }
-  document.querySelectorAll('#req-table th').forEach(th => {
-    th.classList.remove('sorted','asc');
-    if (th.getAttribute('onclick') === `sortBy('${key}')`) {
-      th.classList.add('sorted'); if (sortAsc) th.classList.add('asc');
+    // ════════════════════════ REQUESTS ════════════════════════
+    function buildRequests() {
+      const stepSel = document.getElementById('r-step');
+      stepSel.innerHTML = '<option value="">Tous les steps</option>';
+      [...new Set(REQS.map(r => r.request_step_name).filter(Boolean))].sort().forEach(s => {
+        const o = document.createElement('option'); o.value = s; o.textContent = s; stepSel.appendChild(o);
+      });
     }
-  });
-  filtered.sort((a,b) => {
-    const av = a[sortKey]??-Infinity, bv = b[sortKey]??-Infinity;
-    return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
-  });
-  curPage = 1; renderReqs();
-}
 
-function renderReqs() {
-  const start = (curPage - 1) * pageSize;
-  const slice = filtered.slice(start, start + pageSize);
-  document.getElementById('r-count').textContent = filtered.length + ' / ' + REQS.length + ' requêtes';
-  document.getElementById('req-tbody').innerHTML = slice.map(r => {
-    const s = r.response_status || 0;
-    const url = (r.request_url || '').replace(/^https?:\/\//,'');
-    const urlShort = url.length > 48 ? url.slice(0,48)+'…' : url;
-    const ttfb = r.timing_wait_ms >= 0 ? r.timing_wait_ms.toFixed(0) : '—';
-    const blk = r.timing_blocked_ms >= 0 ? r.timing_blocked_ms.toFixed(0) : '—';
-    const totalC = r.timing_total_ms > 1000 ? 'color:var(--red)' : r.timing_total_ms > 500 ? 'color:var(--amber)' : '';
-    return `<tr class="${r.response_is_error?'err-row':''}">
+    function applyFilters() {
+      const q = document.getElementById('r-search').value.toLowerCase();
+      const step = document.getElementById('r-step').value;
+      const stat = document.getElementById('r-status').value;
+      const type = document.getElementById('r-type').value;
+      const party = document.getElementById('r-party').value;
+      const errOnly = document.getElementById('r-err').value;
+      filtered = REQS.filter(r => {
+        if (q && !(r.request_url || '').toLowerCase().includes(q) && !(r.request_domain || '').toLowerCase().includes(q) && !(r.request_resource_type || '').toLowerCase().includes(q)) return false;
+        if (step && r.request_step_name !== step) return false;
+        if (type && r.request_resource_type !== type) return false;
+        if (party !== '' && String(r.request_is_third_party) !== party) return false;
+        if (errOnly === '1' && !r.response_is_error) return false;
+        if (stat) {
+          const s = r.response_status || 0;
+          if (stat === '2' && !(s >= 200 && s < 300)) return false;
+          if (stat === '3' && !(s >= 300 && s < 400)) return false;
+          if (stat === '4' && !(s >= 400 && s < 500)) return false;
+          if (stat === '5' && !(s >= 500 && s < 600)) return false;
+          if (stat === '0' && s !== 0) return false;
+        }
+        return true;
+      });
+      curPage = 1; renderReqs();
+    }
+
+    function sortBy(key) {
+      if (sortKey === key) sortAsc = !sortAsc; else { sortKey = key; sortAsc = true; }
+      document.querySelectorAll('#req-table th').forEach(th => {
+        th.classList.remove('sorted', 'asc');
+        if (th.getAttribute('onclick') === `sortBy('${key}')`) {
+          th.classList.add('sorted'); if (sortAsc) th.classList.add('asc');
+        }
+      });
+      filtered.sort((a, b) => {
+        const av = a[sortKey] ?? -Infinity, bv = b[sortKey] ?? -Infinity;
+        return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+      });
+      curPage = 1; renderReqs();
+    }
+
+    function renderReqs() {
+      const start = (curPage - 1) * pageSize;
+      const slice = filtered.slice(start, start + pageSize);
+      document.getElementById('r-count').textContent = filtered.length + ' / ' + REQS.length + ' requêtes';
+      document.getElementById('req-tbody').innerHTML = slice.map(r => {
+        const s = r.response_status || 0;
+        const url = (r.request_url || '').replace(/^https?:\/\//, '');
+        const urlShort = url.length > 48 ? url.slice(0, 48) + '…' : url;
+        const ttfb = r.timing_wait_ms >= 0 ? r.timing_wait_ms.toFixed(0) : '—';
+        const blk = r.timing_blocked_ms >= 0 ? r.timing_blocked_ms.toFixed(0) : '—';
+        const totalC = r.timing_total_ms > 1000 ? 'color:var(--red)' : r.timing_total_ms > 500 ? 'color:var(--amber)' : '';
+        return `<tr class="${r.response_is_error ? 'err-row' : ''}">
       <td>${r.request_position}</td>
-      <td style="color:var(--dim)">${r.request_step_name||'—'}</td>
-      <td style="color:var(--amber);font-weight:700">${r.request_method||''}</td>
-      <td class="url-cell"><a href="${r.request_url||''}" target="_blank" title="${r.request_url||''}">${urlShort}</a></td>
+      <td style="color:var(--dim)">${r.request_step_name || '—'}</td>
+      <td style="color:var(--amber);font-weight:700">${r.request_method || ''}</td>
+      <td class="url-cell"><a href="${r.request_url || ''}" target="_blank" title="${r.request_url || ''}">${urlShort}</a></td>
       <td>${statusPill(s)}</td>
       <td>${typePill(r.request_resource_type)}</td>
       <td style="${totalC}">${r.timing_total_ms ? r.timing_total_ms.toFixed(0) : '—'}</td>
@@ -915,180 +1780,181 @@ function renderReqs() {
       <td>${blk}</td>
       <td>${fmtB(r.response_content_size)}</td>
       <td>${yn(r.response_is_compressed)}</td>
-      <td style="color:var(--dim)">${r.response_compression_ratio > 0 ? (r.response_compression_ratio*100).toFixed(0)+'%' : '—'}</td>
+      <td style="color:var(--dim)">${r.response_compression_ratio > 0 ? (r.response_compression_ratio * 100).toFixed(0) + '%' : '—'}</td>
       <td>${r.request_is_third_party ? '<span style="color:var(--orange)">3rd</span>' : '<span style="color:var(--dim)">1st</span>'}</td>
       <td>${yn(r.network_connection_reused)}</td>
       <td>${yn(r.network_dns_cached)}</td>
       <td>${r.request_url_is_api ? '<span style="color:var(--purple)">API</span>' : '—'}</td>
-      <td>${r.request_querystring_count||0}</td>
-      <td>${r.request_cookie_count||0}</td>
+      <td>${r.request_querystring_count || 0}</td>
+      <td>${r.request_cookie_count || 0}</td>
       <td>${yn(r.response_has_hsts)}</td>
       <td>${yn(r.response_has_csp)}</td>
       <td>${yn(r.response_has_etag)}</td>
-      <td style="color:var(--dim)">${r.timing_ratio_wait > 0 ? (r.timing_ratio_wait*100).toFixed(0)+'%' : '—'}</td>
-      <td style="font-size:9px;color:var(--muted)">${(r.request_id||'').replace((META.scenario_id||'')+'_req_','#')}</td>
+      <td style="color:var(--dim)">${r.timing_ratio_wait > 0 ? (r.timing_ratio_wait * 100).toFixed(0) + '%' : '—'}</td>
+      <td style="font-size:9px;color:var(--muted)">${(r.request_id || '').replace((META.scenario_id || '') + '_req_', '#')}</td>
     </tr>`;
-  }).join('');
+      }).join('');
 
-  const tp = Math.ceil(filtered.length / pageSize);
-  const pages = [];
-  pages.push(`<span class="pag-info">Page ${curPage}/${tp}</span>`);
-  if (curPage > 1) pages.push(`<button class="pg" onclick="goPage(${curPage-1})">◀</button>`);
-  const s2 = Math.max(1, curPage-2), e = Math.min(tp, curPage+2);
-  for (let p = s2; p <= e; p++) pages.push(`<button class="pg ${p===curPage?'on':''}" onclick="goPage(${p})">${p}</button>`);
-  if (curPage < tp) pages.push(`<button class="pg" onclick="goPage(${curPage+1})">▶</button>`);
-  document.getElementById('req-pag').innerHTML = pages.join('');
-}
-function goPage(p) { curPage = p; renderReqs(); }
+      const tp = Math.ceil(filtered.length / pageSize);
+      const pages = [];
+      pages.push(`<span class="pag-info">Page ${curPage}/${tp}</span>`);
+      if (curPage > 1) pages.push(`<button class="pg" onclick="goPage(${curPage - 1})">◀</button>`);
+      const s2 = Math.max(1, curPage - 2), e = Math.min(tp, curPage + 2);
+      for (let p = s2; p <= e; p++) pages.push(`<button class="pg ${p === curPage ? 'on' : ''}" onclick="goPage(${p})">${p}</button>`);
+      if (curPage < tp) pages.push(`<button class="pg" onclick="goPage(${curPage + 1})">▶</button>`);
+      document.getElementById('req-pag').innerHTML = pages.join('');
+    }
+    function goPage(p) { curPage = p; renderReqs(); }
 
-// ════════════════════════ WATERFALL ════════════════════════
-function buildWaterfall() {
-  const sample = REQS.slice(0, 80);
-  const maxMs = Math.max(...sample.map(r => r.timing_total_ms || 0), 1);
-  const C = {blk:'#374151',dns:'#059669',con:'#1d4ed8',ssl:'#7c3aed',snd:'#92400e',wai:'#d97706',rcv:'#065f46'};
+    // ════════════════════════ WATERFALL ════════════════════════
+    function buildWaterfall() {
+      const sample = REQS.slice(0, 80);
+      const maxMs = Math.max(...sample.map(r => r.timing_total_ms || 0), 1);
+      const C = { blk: '#374151', dns: '#059669', con: '#1d4ed8', ssl: '#7c3aed', snd: '#92400e', wai: '#d97706', rcv: '#065f46' };
 
-  const hdr = `<div class="wf-header">
+      const hdr = `<div class="wf-header">
     <div class="wf-hcell">#</div><div class="wf-hcell">URL</div>
     <div class="wf-hcell">Status</div><div class="wf-hcell">Total</div>
     <div class="wf-hcell">Timeline (proportionnel)</div>
   </div>`;
 
-  const rows = sample.map(r => {
-    const tot = r.timing_total_ms || 0;
-    const phases = {
-      blk: Math.max(r.timing_blocked_ms_clean || 0, 0),
-      dns: Math.max(r.timing_dns_ms_clean || 0, 0),
-      con: Math.max(r.timing_connect_ms_clean || 0, 0),
-      ssl: Math.max(r.timing_ssl_ms_clean || 0, 0),
-      snd: Math.max(r.timing_send_ms_clean || 0, 0),
-      wai: Math.max(r.timing_wait_ms_clean || 0, 0),
-      rcv: Math.max(r.timing_receive_ms_clean || 0, 0),
-    };
-    const sum = Object.values(phases).reduce((a,b)=>a+b,0) || 1;
-    const W = tot / maxMs * 100;
-    let left = 0;
-    const segs = Object.entries(phases).map(([k,v]) => {
-      const w = v / sum * W;
-      const seg = `<div class="wf-seg" style="left:${left.toFixed(2)}%;width:${w.toFixed(2)}%;background:${C[k]}" title="${k}: ${v.toFixed(1)}ms"></div>`;
-      left += w; return seg;
-    }).join('');
-    const urlShort = (r.request_url||'').replace(/^https?:\/\/[^/]+/,'').substring(0,36) || '/';
-    return `<div class="wf-row">
+      const rows = sample.map(r => {
+        const tot = r.timing_total_ms || 0;
+        const phases = {
+          blk: Math.max(r.timing_blocked_ms_clean || 0, 0),
+          dns: Math.max(r.timing_dns_ms_clean || 0, 0),
+          con: Math.max(r.timing_connect_ms_clean || 0, 0),
+          ssl: Math.max(r.timing_ssl_ms_clean || 0, 0),
+          snd: Math.max(r.timing_send_ms_clean || 0, 0),
+          wai: Math.max(r.timing_wait_ms_clean || 0, 0),
+          rcv: Math.max(r.timing_receive_ms_clean || 0, 0),
+        };
+        const sum = Object.values(phases).reduce((a, b) => a + b, 0) || 1;
+        const W = tot / maxMs * 100;
+        let left = 0;
+        const segs = Object.entries(phases).map(([k, v]) => {
+          const w = v / sum * W;
+          const seg = `<div class="wf-seg" style="left:${left.toFixed(2)}%;width:${w.toFixed(2)}%;background:${C[k]}" title="${k}: ${v.toFixed(1)}ms"></div>`;
+          left += w; return seg;
+        }).join('');
+        const urlShort = (r.request_url || '').replace(/^https?:\/\/[^/]+/, '').substring(0, 36) || '/';
+        return `<div class="wf-row">
       <div class="wf-pos">${r.request_position}</div>
-      <div class="wf-url" title="${r.request_url||''}">${urlShort}</div>
-      <div>${statusPill(r.response_status||0)}</div>
+      <div class="wf-url" title="${r.request_url || ''}">${urlShort}</div>
+      <div>${statusPill(r.response_status || 0)}</div>
       <div class="wf-ms">${tot.toFixed(0)} ms</div>
       <div class="wf-track">${segs}</div>
     </div>`;
-  }).join('');
+      }).join('');
 
-  document.getElementById('waterfall-inner').innerHTML = hdr + rows;
-}
+      document.getElementById('waterfall-inner').innerHTML = hdr + rows;
+    }
 
-// ════════════════════════ ALL FEATURES ════════════════════════
-function buildAllFeatures() {
-  const T3_GROUPS = {
-    '🎯 Identification': ['scenario_id','scenario_title','scenario_main_domain','scenario_start_datetime','scenario_nb_steps','scenario_total_requests','scenario_duration_sec'],
-    '🌐 Page Load (1er step)': ['scenario_dom_loaded_ms','scenario_page_load_ms'],
-    '📊 Codes HTTP': ['scenario_2xx_count','scenario_3xx_count','scenario_4xx_count','scenario_5xx_count','scenario_0_failed_count','scenario_total_failed','scenario_failure_rate_pct'],
-    '📦 Types de ressources (inférés)': ['scenario_document_count','scenario_script_count','scenario_stylesheet_count','scenario_image_count','scenario_font_count','scenario_fetch_xhr_count','scenario_media_count','scenario_other_count'],
-    '⚖️ Tailles par type (bytes décompressés)': ['scenario_js_bytes','scenario_css_bytes','scenario_image_bytes','scenario_font_bytes','scenario_fetch_bytes','scenario_html_bytes'],
-    '📥 Volumes de transfert': ['scenario_bytes_downloaded','scenario_bytes_uploaded','scenario_transfer_bytes','scenario_content_bytes'],
-    '⚠️ Échecs par type de ressource': ['scenario_failed_script','scenario_failed_stylesheet','scenario_failed_image','scenario_failed_font','scenario_failed_fetch'],
-    '⏱ TTFB — Time To First Byte (ms)': ['scenario_ttfb_ms_mean','scenario_ttfb_ms_median','scenario_ttfb_ms_p95','scenario_ttfb_ms_p99','scenario_ttfb_ms_max','scenario_ttfb_ms_min'],
-    '⏱ Durée totale requête (ms)': ['scenario_req_time_ms_mean','scenario_req_time_ms_median','scenario_req_time_ms_p95','scenario_req_time_ms_p99','scenario_req_time_ms_max','scenario_req_time_ms_min'],
-    '⏱ Blocked (ms)': ['scenario_blocked_ms_mean','scenario_blocked_ms_median','scenario_blocked_ms_p95','scenario_blocked_ms_p99','scenario_blocked_ms_max','scenario_blocked_ms_min'],
-    '⏱ DNS Resolution (ms)': ['scenario_dns_ms_mean','scenario_dns_ms_median','scenario_dns_ms_p95','scenario_dns_ms_p99','scenario_dns_ms_max','scenario_dns_ms_min'],
-    '⏱ TCP Connect (ms)': ['scenario_connect_ms_mean','scenario_connect_ms_median','scenario_connect_ms_p95','scenario_connect_ms_p99','scenario_connect_ms_max','scenario_connect_ms_min'],
-    '⏱ SSL/TLS Handshake (ms)': ['scenario_ssl_ms_mean','scenario_ssl_ms_median','scenario_ssl_ms_p95','scenario_ssl_ms_p99','scenario_ssl_ms_max','scenario_ssl_ms_min'],
-    '⏱ Send (ms)': ['scenario_send_ms_mean','scenario_send_ms_median','scenario_send_ms_p95','scenario_send_ms_p99','scenario_send_ms_max','scenario_send_ms_min'],
-    '⏱ Receive (ms)': ['scenario_receive_ms_mean','scenario_receive_ms_median','scenario_receive_ms_p95','scenario_receive_ms_p99','scenario_receive_ms_max','scenario_receive_ms_min'],
-    '🚨 Anomalies temporelles': ['scenario_slow_count','scenario_timeout_count','scenario_dns_error_count','scenario_ssl_error_count','scenario_conn_error_count'],
-    '🌐 Protocoles & HTTPS': ['scenario_http1_count','scenario_http2_count','scenario_http3_count','scenario_https_count','scenario_http_insecure','scenario_https_pct'],
-    '💾 Cache': ['scenario_cache_hit_304','scenario_cache_hit_pct','scenario_redirects_count'],
-    '🗜 Compression': ['scenario_compressed_count','scenario_compression_pct','scenario_comp_saved_bytes','scenario_comp_ratio_pct','scenario_gzip_count','scenario_br_count'],
-    '🌍 Domaines & 3rd Party': ['scenario_third_party_count','scenario_third_party_failed','scenario_unique_domains','scenario_third_party_pct'],
-    '🔌 Connexions réseau': ['scenario_connection_reused','scenario_connection_reuse_pct','scenario_dns_cached_count','scenario_unique_ips','scenario_unique_connections'],
-    '🔒 Headers sécurité': ['scenario_with_hsts','scenario_with_csp','scenario_with_cors','scenario_with_etag','scenario_with_auth','scenario_with_api_key'],
-    '📤 Activité requêtes': ['scenario_with_referer','scenario_post_requests','scenario_api_count','scenario_responses_with_text'],
-    '🤖 Modèle ML / Label (réservé)': ['model1_score_mean','model1_score_max','model1_score_p95','model1_nb_req_score_gt_07','model1_nb_req_score_gt_09','model1_score_max_script','model1_score_max_document','model1_score_max_image','model1_score_max_fetch','model1_score_max_post','is_incident'],
-  };
+    // ════════════════════════ ALL FEATURES ════════════════════════
+    function buildAllFeatures() {
+      const T3_GROUPS = {
+        '🎯 Identification': ['scenario_id', 'scenario_title', 'scenario_main_domain', 'scenario_start_datetime', 'scenario_nb_steps', 'scenario_total_requests', 'scenario_duration_sec'],
+        '🌐 Page Load (1er step)': ['scenario_dom_loaded_ms', 'scenario_page_load_ms'],
+        '📊 Codes HTTP': ['scenario_2xx_count', 'scenario_3xx_count', 'scenario_4xx_count', 'scenario_5xx_count', 'scenario_0_failed_count', 'scenario_total_failed', 'scenario_failure_rate_pct'],
+        '📦 Types de ressources (inférés)': ['scenario_document_count', 'scenario_script_count', 'scenario_stylesheet_count', 'scenario_image_count', 'scenario_font_count', 'scenario_fetch_xhr_count', 'scenario_media_count', 'scenario_other_count'],
+        '⚖️ Tailles par type (bytes décompressés)': ['scenario_js_bytes', 'scenario_css_bytes', 'scenario_image_bytes', 'scenario_font_bytes', 'scenario_fetch_bytes', 'scenario_html_bytes'],
+        '📥 Volumes de transfert': ['scenario_bytes_downloaded', 'scenario_bytes_uploaded', 'scenario_transfer_bytes', 'scenario_content_bytes'],
+        '⚠️ Échecs par type de ressource': ['scenario_failed_script', 'scenario_failed_stylesheet', 'scenario_failed_image', 'scenario_failed_font', 'scenario_failed_fetch'],
+        '⏱ TTFB — Time To First Byte (ms)': ['scenario_ttfb_ms_mean', 'scenario_ttfb_ms_median', 'scenario_ttfb_ms_p95', 'scenario_ttfb_ms_p99', 'scenario_ttfb_ms_max', 'scenario_ttfb_ms_min'],
+        '⏱ Durée totale requête (ms)': ['scenario_req_time_ms_mean', 'scenario_req_time_ms_median', 'scenario_req_time_ms_p95', 'scenario_req_time_ms_p99', 'scenario_req_time_ms_max', 'scenario_req_time_ms_min'],
+        '⏱ Blocked (ms)': ['scenario_blocked_ms_mean', 'scenario_blocked_ms_median', 'scenario_blocked_ms_p95', 'scenario_blocked_ms_p99', 'scenario_blocked_ms_max', 'scenario_blocked_ms_min'],
+        '⏱ DNS Resolution (ms)': ['scenario_dns_ms_mean', 'scenario_dns_ms_median', 'scenario_dns_ms_p95', 'scenario_dns_ms_p99', 'scenario_dns_ms_max', 'scenario_dns_ms_min'],
+        '⏱ TCP Connect (ms)': ['scenario_connect_ms_mean', 'scenario_connect_ms_median', 'scenario_connect_ms_p95', 'scenario_connect_ms_p99', 'scenario_connect_ms_max', 'scenario_connect_ms_min'],
+        '⏱ SSL/TLS Handshake (ms)': ['scenario_ssl_ms_mean', 'scenario_ssl_ms_median', 'scenario_ssl_ms_p95', 'scenario_ssl_ms_p99', 'scenario_ssl_ms_max', 'scenario_ssl_ms_min'],
+        '⏱ Send (ms)': ['scenario_send_ms_mean', 'scenario_send_ms_median', 'scenario_send_ms_p95', 'scenario_send_ms_p99', 'scenario_send_ms_max', 'scenario_send_ms_min'],
+        '⏱ Receive (ms)': ['scenario_receive_ms_mean', 'scenario_receive_ms_median', 'scenario_receive_ms_p95', 'scenario_receive_ms_p99', 'scenario_receive_ms_max', 'scenario_receive_ms_min'],
+        '🚨 Anomalies temporelles': ['scenario_slow_count', 'scenario_timeout_count', 'scenario_dns_error_count', 'scenario_ssl_error_count', 'scenario_conn_error_count'],
+        '🌐 Protocoles & HTTPS': ['scenario_http1_count', 'scenario_http2_count', 'scenario_http3_count', 'scenario_https_count', 'scenario_http_insecure', 'scenario_https_pct'],
+        '💾 Cache': ['scenario_cache_hit_304', 'scenario_cache_hit_pct', 'scenario_redirects_count'],
+        '🗜 Compression': ['scenario_compressed_count', 'scenario_compression_pct', 'scenario_comp_saved_bytes', 'scenario_comp_ratio_pct', 'scenario_gzip_count', 'scenario_br_count'],
+        '🌍 Domaines & 3rd Party': ['scenario_third_party_count', 'scenario_third_party_failed', 'scenario_unique_domains', 'scenario_third_party_pct'],
+        '🔌 Connexions réseau': ['scenario_connection_reused', 'scenario_connection_reuse_pct', 'scenario_dns_cached_count', 'scenario_unique_ips', 'scenario_unique_connections'],
+        '🔒 Headers sécurité': ['scenario_with_hsts', 'scenario_with_csp', 'scenario_with_cors', 'scenario_with_etag', 'scenario_with_auth', 'scenario_with_api_key'],
+        '📤 Activité requêtes': ['scenario_with_referer', 'scenario_post_requests', 'scenario_api_count', 'scenario_responses_with_text'],
+        '🤖 Modèle ML / Label (réservé)': ['model1_score_mean', 'model1_score_max', 'model1_score_p95', 'model1_nb_req_score_gt_07', 'model1_nb_req_score_gt_09', 'model1_score_max_script', 'model1_score_max_document', 'model1_score_max_image', 'model1_score_max_fetch', 'model1_score_max_post', 'is_incident'],
+      };
 
-  // Affiche TOUTES les clés du SC, y compris celles hors des groupes
-  const allScKeys = Object.keys(SC);
-  const groupedKeys = new Set(Object.values(T3_GROUPS).flat());
-  const ungroupedKeys = allScKeys.filter(k => !groupedKeys.has(k));
-  const finalGroups = {...T3_GROUPS};
-  if (ungroupedKeys.length > 0) finalGroups['📋 Autres features'] = ungroupedKeys;
+      // Affiche TOUTES les clés du SC, y compris celles hors des groupes
+      const allScKeys = Object.keys(SC);
+      const groupedKeys = new Set(Object.values(T3_GROUPS).flat());
+      const ungroupedKeys = allScKeys.filter(k => !groupedKeys.has(k));
+      const finalGroups = { ...T3_GROUPS };
+      if (ungroupedKeys.length > 0) finalGroups['📋 Autres features'] = ungroupedKeys;
 
-  document.getElementById('t3-count').textContent = allScKeys.length + ' features';
+      document.getElementById('t3-count').textContent = allScKeys.length + ' features';
 
-  document.getElementById('t3-groups').innerHTML = Object.entries(finalGroups).map(([g, keys]) => {
-    const existingKeys = keys.filter(k => k in SC);
-    if (!existingKeys.length) return '';
-    const rows = existingKeys.map(k => {
-      const v = SC[k];
-      const isNull = v === null || v === undefined;
-      const isZero = !isNull && v === 0;
-      const isBad = !isNull && typeof v === 'number' && (k.includes('error') || k.includes('fail') || k.includes('timeout') || k.includes('insecure')) && v > 0;
-      const isGood = !isNull && typeof v === 'number' && (k.includes('reuse') || k.includes('compress') || k.includes('cache_hit') || k.includes('hsts') || k.includes('csp')) && v > 0;
-      const disp = isNull ? '—' : typeof v === 'number' ? (Number.isInteger(v) ? v.toLocaleString('fr-FR') : v.toFixed(4)) : String(v);
-      const cls = isNull ? 'v-null' : isZero ? 'v-zero' : isBad ? 'v-err' : isGood ? 'v-ok' : '';
-      return `<tr><td>${k}</td><td class="${cls}">${disp}</td></tr>`;
-    }).join('');
-    return `<div class="feat-section">
+      document.getElementById('t3-groups').innerHTML = Object.entries(finalGroups).map(([g, keys]) => {
+        const existingKeys = keys.filter(k => k in SC);
+        if (!existingKeys.length) return '';
+        const rows = existingKeys.map(k => {
+          const v = SC[k];
+          const isNull = v === null || v === undefined;
+          const isZero = !isNull && v === 0;
+          const isBad = !isNull && typeof v === 'number' && (k.includes('error') || k.includes('fail') || k.includes('timeout') || k.includes('insecure')) && v > 0;
+          const isGood = !isNull && typeof v === 'number' && (k.includes('reuse') || k.includes('compress') || k.includes('cache_hit') || k.includes('hsts') || k.includes('csp')) && v > 0;
+          const disp = isNull ? '—' : typeof v === 'number' ? (Number.isInteger(v) ? v.toLocaleString('fr-FR') : v.toFixed(4)) : String(v);
+          const cls = isNull ? 'v-null' : isZero ? 'v-zero' : isBad ? 'v-err' : isGood ? 'v-ok' : '';
+          return `<tr><td>${k}</td><td class="${cls}">${disp}</td></tr>`;
+        }).join('');
+        return `<div class="feat-section">
       <div class="feat-section-title">${g} <span style="color:var(--muted);font-size:8px">(${existingKeys.length} features)</span></div>
       <div class="tbl-wrap" style="border-radius:0 0 8px 8px;border-top:none">
         <table class="feat-table">${rows}</table>
       </div>
     </div>`;
-  }).join('');
+      }).join('');
 
-  // T2 — toutes les features de chaque step
-  const allStepKeys = STEPS.length ? Object.keys(STEPS[0]) : [];
-  document.getElementById('t2-all').innerHTML = STEPS.map(s => {
-    const rows = allStepKeys.map(k => {
-      const v = s[k];
-      const isNull = v === null || v === undefined;
-      const isZero = !isNull && v === 0;
-      const disp = isNull ? '—' : typeof v === 'number' ? (Number.isInteger(v) ? v.toLocaleString('fr-FR') : v.toFixed(4)) : String(v).substring(0,80);
-      const cls = isNull ? 'v-null' : isZero ? 'v-zero' : '';
-      return `<tr><td>${k}</td><td class="${cls}">${disp}</td></tr>`;
-    }).join('');
-    return `<div class="feat-section">
-      <div class="feat-section-title">Step ${s.step_index} — ${s.step_title||'—'} <span style="color:var(--muted);font-size:8px">(${allStepKeys.length} features)</span></div>
+      // T2 — toutes les features de chaque step
+      const allStepKeys = STEPS.length ? Object.keys(STEPS[0]) : [];
+      document.getElementById('t2-all').innerHTML = STEPS.map(s => {
+        const rows = allStepKeys.map(k => {
+          const v = s[k];
+          const isNull = v === null || v === undefined;
+          const isZero = !isNull && v === 0;
+          const disp = isNull ? '—' : typeof v === 'number' ? (Number.isInteger(v) ? v.toLocaleString('fr-FR') : v.toFixed(4)) : String(v).substring(0, 80);
+          const cls = isNull ? 'v-null' : isZero ? 'v-zero' : '';
+          return `<tr><td>${k}</td><td class="${cls}">${disp}</td></tr>`;
+        }).join('');
+        return `<div class="feat-section">
+      <div class="feat-section-title">Step ${s.step_index} — ${s.step_title || '—'} <span style="color:var(--muted);font-size:8px">(${allStepKeys.length} features)</span></div>
       <div class="tbl-wrap" style="border-radius:0 0 8px 8px;border-top:none">
         <table class="feat-table">${rows}</table>
       </div>
     </div>`;
-  }).join('');
+      }).join('');
 
-  // T1 — tableau features × requêtes
-  const T1_KEYS = REQS.length ? Object.keys(REQS[0]) : [];
-  document.getElementById('t1-feat-sel-count').textContent = T1_KEYS.length + ' features · ' + REQS.length + ' requêtes';
-  renderT1Table();
-}
+      // T1 — tableau features × requêtes
+      const T1_KEYS = REQS.length ? Object.keys(REQS[0]) : [];
+      document.getElementById('t1-feat-sel-count').textContent = T1_KEYS.length + ' features · ' + REQS.length + ' requêtes';
+      renderT1Table();
+    }
 
-function renderT1Table() {
-  const q = (document.getElementById('t1-search').value||'').toLowerCase();
-  const T1_KEYS = REQS.length ? Object.keys(REQS[0]) : [];
-  let sample = REQS.slice(0, 30);
-  if (q) sample = REQS.filter(r => (r.request_url||'').toLowerCase().includes(q) || (r.request_domain||'').toLowerCase().includes(q)).slice(0,30);
-  document.getElementById('t1-count-label').textContent = sample.length + ' requêtes affichées';
+    function renderT1Table() {
+      const q = (document.getElementById('t1-search').value || '').toLowerCase();
+      const T1_KEYS = REQS.length ? Object.keys(REQS[0]) : [];
+      let sample = REQS.slice(0, 30);
+      if (q) sample = REQS.filter(r => (r.request_url || '').toLowerCase().includes(q) || (r.request_domain || '').toLowerCase().includes(q)).slice(0, 30);
+      document.getElementById('t1-count-label').textContent = sample.length + ' requêtes affichées';
 
-  const thead = `<thead><tr><th>Feature (${T1_KEYS.length})</th>${sample.map(r=>`<th style="max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${r.request_url||''}">#${r.request_position} ${(r.request_url||'').replace(/^https?:\/\/[^/]+/,'').substring(0,18)}…</th>`).join('')}</tr></thead>`;
-  const tbody = '<tbody>' + T1_KEYS.map(k => {
-    const cells = sample.map(r => {
-      const v = r[k];
-      if (v === null || v === undefined) return `<td class="v-null">—</td>`;
-      if (v === 0) return `<td class="v-zero">0</td>`;
-      if (typeof v === 'number') return `<td>${Number.isInteger(v)?v.toLocaleString('fr-FR'):v.toFixed(3)}</td>`;
-      const sv = String(v); return `<td title="${sv}">${sv.substring(0,30)}</td>`;
-    }).join('');
-    return `<tr><td style="color:var(--dim);font-size:9px;position:sticky;left:0;background:var(--bg2);z-index:2">${k}</td>${cells}</tr>`;
-  }).join('') + '</tbody>';
-  document.getElementById('t1-feat-table').innerHTML = thead + tbody;
-}
-</script>
+      const thead = `<thead><tr><th>Feature (${T1_KEYS.length})</th>${sample.map(r => `<th style="max-width:120px;overflow:hidden;text-overflow:ellipsis" title="${r.request_url || ''}">#${r.request_position} ${(r.request_url || '').replace(/^https?:\/\/[^/]+/, '').substring(0, 18)}…</th>`).join('')}</tr></thead>`;
+      const tbody = '<tbody>' + T1_KEYS.map(k => {
+        const cells = sample.map(r => {
+          const v = r[k];
+          if (v === null || v === undefined) return `<td class="v-null">—</td>`;
+          if (v === 0) return `<td class="v-zero">0</td>`;
+          if (typeof v === 'number') return `<td>${Number.isInteger(v) ? v.toLocaleString('fr-FR') : v.toFixed(3)}</td>`;
+          const sv = String(v); return `<td title="${sv}">${sv.substring(0, 30)}</td>`;
+        }).join('');
+        return `<tr><td style="color:var(--dim);font-size:9px;position:sticky;left:0;background:var(--bg2);z-index:2">${k}</td>${cells}</tr>`;
+      }).join('') + '</tbody>';
+      document.getElementById('t1-feat-table').innerHTML = thead + tbody;
+    }
+  </script>
 </body>
+
 </html>
